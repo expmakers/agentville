@@ -98,7 +98,7 @@ Handy commands, typed after `/agentville`: `lite` (open without the map), `refre
   It counts only after you confirm it for that repository, and never covers secrets, tokens, auth or permissions.
   [Ship fast](docs/team-flow.md#ship-fast-opt-in).
 - **Goals file.** Write your goals in `.agentville/metas.md` ("metas" means goals), so Product decides requests the
-  way you would and asks you only about the grave ones. Its keys can be English or Spanish. See the example in
+  way you would and asks you only about the grave ones. Its keys can be English, Spanish or Korean. See the example in
   [Goals file](docs/impact-and-goals.md#goals-file).
 - **Your own team.** The agents and the flow are plain Markdown: edit or fork `agentville/agents/*.md` and
   `agentville/skills/team-flow/SKILL.md` to change how your team works.

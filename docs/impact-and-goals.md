@@ -59,7 +59,8 @@ Each impact check costs one haiku call and, on `PRODUCT`, one sonnet call.
 Put your goals in `.agentville/metas.md` at the repository root ("metas" means goals). Each goal is a
 `##` heading (at most 60 characters) followed by `Delegated: yes|no` (may Product decide it without you), `Priority`
 (high, medium or low), one line saying why, and an optional `Out of scope` line. The Spanish keys work too:
-`Delegada: sí|no`, `Prioridad` (alta, media, baja) and `Fuera de alcance`.
+`Delegada: sí|no`, `Prioridad` (alta, media, baja) and `Fuera de alcance`, and so do the Korean ones: `위임: 예|아니오`,
+`우선순위` (높음, 보통, 낮음) and `범위 밖`.
 
 ```
 ## Measure delivery times well

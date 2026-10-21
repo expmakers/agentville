@@ -42,7 +42,7 @@ review step keeps Agentville's reviewers. The merge and deploy rules hold even w
 merge or deploy step does not count as you allowing), and a live check you require blocks publishing.
 
 To keep a repository out of the flow altogether, put this line, on its own, in its root CLAUDE.md:
-`Agentville: flow off` (`Agentville: flujo apagado` works too). The map keeps working; the Lead just does not run
+`Agentville: flow off` (`Agentville: flujo apagado` and `Agentville: 플로 끔` work too). The map keeps working; the Lead just does not run
 the flow.
 
 ### Merge rule
@@ -61,7 +61,7 @@ Reviewers answer `PASS` or `CHANGES` and mark each finding `[blocking]` or `[nit
 round, and a re-review goes only to the reviewers that asked for changes (and security, when a fix touches a risk
 item). Nits are listed in the Lead's close message, under "Nits for the next change", and ride with the next change.
 When the rounds run out, a large change goes to the approver and a small or medium one comes to you. When the approver
-escalates, it asks you one question with options and a recommendation: "approved" (or "aprobado") lets it merge (or
+escalates, it asks you one question with options and a recommendation: "approved" (or "aprobado", or "승인") lets it merge (or
 open the PR) under the merge rule; anything else goes back to the builder as an extra round you authorized.
 
 ### Affected tests only

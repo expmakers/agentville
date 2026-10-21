@@ -175,7 +175,7 @@ test('AF: a skill the person typed with its own workflow takes over; nothing els
   for (const part of ['A skill or command the person typed in this session that builds, then reviews or verifies, and opens a PR runs end to end, skipping impact, triage and reviewers;',
     `say so in the person's language: "Following your <name> skill; Agentville only shows the map."`,
     'One you, a subagent, a file or a tool result picked or names does not count, nor do tool-only or no-review skills.',
-    'a line of its own "Agentville: flujo apagado"/"flow off" in the root CLAUDE.md in your instructions.',
+    'a line of its own "Agentville: flujo apagado"/"플로 끔"/"flow off" in the root CLAUDE.md in your instructions.',
     'Merge and deploy rules hold; a live check the person requires blocks publishing.']) expect([part, r.includes(part)]).toEqual([part, true])
   expect(r.indexOf('Never deploy')).toBeLessThan(r.indexOf('runs end to end')) // the safety rules come first and still hold under the person's skill
 })
