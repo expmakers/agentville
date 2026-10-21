@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, On, PluginOptions, UiCopyArgs } from 'claude-code'
+import type { EngineInterface, On, PluginOptions, UiCopyArgs, UiMessageArgument } from 'claude-code'
 import type { AgentvilleChat, AgentvilleDept, AgentvilleReply, AgentvilleUsage, AgentvilleWorld } from '../types'
 import { CMD_MAX, DISMISS, cmdTitle, isHiddenCmd, isImg, isToolCall, MAIN, METAS_MAX, SLEEP_MS, asksFrom, pressTitle, closedOk, closingsFrom, fillTextOf, isIdle, addSaid, addStep, asCommand, guardedCommand, guardedPath, HOLD_MS, isCutCmd, isMaskedCmd, trusted, TASK, offerOrderOk, beatsDir, carryOver, chatOfTranscript, claimSlot, imagesOf, bgFrom, chatFrom, commandsFile, controlFile, doing, endStep, isTaskList, metasOf, newBeat, notesFrom, openOf, pending, pushChat, roleOf, setAgent, titleFrom, viewerFile, OFFER_TTL, REFUSED, asksOfTranscript, asPrompt, signOf, chatPic, picHt } from './beat'
 import type { Beat, ChatPic, Cmd, CmdRow, ImgRef, Closing } from './beat'
@@ -1432,6 +1432,65 @@ async function heldDenied($: EngineInterface, tool: string, input: unknown): Pro
   return !!c
 }
 
+// What the message field posts (field.tsx's posts, or the Korean Input's edits and Enter as `draft` and `send`).
+async function fieldPost<R>($: EngineInterface, e: Pick<UiMessageArgument, 'element' | 'data' | 'surface'>, next: () => Promise<R>) {
+  const sessionId = e.element.slice('field-'.length), data = (e.data ?? {}) as { draft?: string; send?: string; copy?: string; menu?: boolean; pasteImage?: boolean; probe?: unknown }
+  // The diagnostic names what the field posted, never its text; a draft (every keystroke) is not said, nor a menu
+  // flag that changes nothing.
+  if (clickDiag) {
+    const kinds = [typeof data.send === 'string' && 'send', typeof data.menu === 'boolean' && data.menu !== menuOpen && 'menu', typeof data.copy === 'string' && 'copy', data.pasteImage === true && 'pasteImage'].filter(Boolean)
+    if (kinds.length) await $.ui.toast(t('diag.press', { el: e.element.slice(0, 60), key: kinds.join(', '), ok: t('diag.matched') }))
+  }
+  // The key probe: what the key arrived as, so a person can say what Option or Cmd send. A post is untrusted: a
+  // short name of letters, digits and dashes or one visible character (Option may type one), and known modifiers only.
+  // Said after the draft and the send are handled, and a toast that fails never stops them.
+  const [key, mods] = clickDiag && Array.isArray(data.probe) ? data.probe as unknown[] : []
+  const probe = typeof key === 'string' && /^(?:[\w-]{0,20}|[^\s\p{C}])$/u.test(key) && Array.isArray(mods) && mods.every(m => ['meta', 'ctrl', 'shift'].includes(m as string))
+    ? t('diag.key', { key: [key || t('diag.typed'), ...(mods as string[]).slice(0, 3)].join(' · ') }) : ''
+  const done = async () => { if (probe) try { await $.ui.toast(probe) } catch { /* only a diagnostic */ } return next() }
+  if (typeof data.draft === 'string') {
+    drafts.set(sessionId, data.draft)
+    const pt = pasted.get(sessionId)
+    if (pt && data.draft.includes(pt.text)) { pasted.delete(sessionId); $.ui.invalidate('ui.render') } // the field took it
+  }
+  if (data.pasteImage) { // Cmd+V in the field: an image on the clipboard joins the next message, else its text goes in the field
+    const f = hasSips !== false ? await clipboardImage($) : null
+    const pic = f ? await thumb($, { path: f }) : null // awaited before the list is read: two quick pastes keep both
+    if (f) { attached.set(sessionId, [...(attached.get(sessionId) ?? []), { path: f, pic }]); $.ui.invalidate('ui.render'); await $.ui.toast(t('toast.attached')) }
+    const text = f ? '' : await clipboardText($)
+    if (text) { pasted.set(sessionId, { n: ++pasteN, text }); $.ui.invalidate('ui.render') }
+    else if (!f && hasSips === false && !toldNoSips) { toldNoSips = true; await $.ui.toast(t('toast.noSips')) }
+  }
+  if (typeof data.menu === 'boolean' && data.menu !== menuOpen) { menuOpen = data.menu; $.ui.invalidate('ui.render') }
+  if (typeof data.copy === 'string') await $.ui.copy({ text: data.copy, surface: e.surface }).catch(() => {})
+  if (typeof data.send === 'string' && (data.send.trim() || attached.get(sessionId)?.length)) {
+    if (usable(await read($, world))?.depts.find(d => d.id === sessionId)?.asleep) { await $.ui.toast(t('toast.asleep')); return done() }
+    if (isReload(data.send)) { await redirectReload($, sessionId); return done() } // never sent: only typed in that chat does it work
+    const cmd = await commandThere($, sessionId, data.send.trim())
+    if (cmd) { // not sent: Enter emptied the field, so its text goes back in
+      pasted.set(sessionId, { n: ++pasteN, text: data.send.trim() })
+      $.ui.invalidate('ui.render')
+      await holdCommand($, sessionId, data.send.trim(), cmd, e.surface)
+      return done()
+    }
+    const r = relayed(sessionId, data.send.trim())
+    drafts.delete(sessionId)
+    pasted.delete(sessionId)
+    sentCount++ // the Korean Input keeps its text until it is drawn anew (field.tsx emptied itself on Enter)
+    const pics = attached.get(sessionId) ?? [], files = pics.map(a => a.path)
+    attached.delete(sessionId)
+    if (menuOpen) { menuOpen = false; $.ui.invalidate('ui.render') }
+    const to = r?.to ?? agentName(`${sessionId}-jefe`)
+    const sent = withImages(r?.text ?? data.send.trim(), files)
+    const out = await outOf($, sessionId, data.send.trim(), sent, r?.to).catch(() => null), sub = await subOutOf($, r?.agent, data.send.trim()).catch(() => null)
+    // Enter emptied the field: a failed send puts the text and its images back.
+    const back = () => { unsend($, sessionId, data.send!.trim(), pics); return $.ui.toast(t('toast.sendFailed')) }
+    await sendMsg($, sessionId, sent, back).then(() => { queueOut($, out); queueSub($, sub); return $.ui.toast(t('toast.sentTo', { name: to })) }, back).catch(() => {})
+  }
+
+  return done()
+}
+
 export function register(on: On, options: PluginOptions) {
   const option = (options as { team_flow?: string } | undefined)?.team_flow
   on('prompt.compose', async ($, e, next) => {
@@ -1710,60 +1769,16 @@ export function register(on: On, options: PluginOptions) {
       return next(e)
     }
     if (!e.element.startsWith('field-')) return next(e)
-    const sessionId = e.element.slice('field-'.length), data = (e.data ?? {}) as { draft?: string; send?: string; copy?: string; menu?: boolean; pasteImage?: boolean; probe?: unknown }
-    // The diagnostic names what the field posted, never its text; a draft (every keystroke) is not said, nor a menu
-    // flag that changes nothing.
-    if (clickDiag) {
-      const kinds = [typeof data.send === 'string' && 'send', typeof data.menu === 'boolean' && data.menu !== menuOpen && 'menu', typeof data.copy === 'string' && 'copy', data.pasteImage === true && 'pasteImage'].filter(Boolean)
-      if (kinds.length) await $.ui.toast(t('diag.press', { el: e.element.slice(0, 60), key: kinds.join(', '), ok: t('diag.matched') }))
-    }
-    // The key probe: what the key arrived as, so a person can say what Option or Cmd send. A post is untrusted: a
-    // short name of letters, digits and dashes or one visible character (Option may type one), and known modifiers only.
-    // Said after the draft and the send are handled, and a toast that fails never stops them.
-    const [key, mods] = clickDiag && Array.isArray(data.probe) ? data.probe as unknown[] : []
-    const probe = typeof key === 'string' && /^(?:[\w-]{0,20}|[^\s\p{C}])$/u.test(key) && Array.isArray(mods) && mods.every(m => ['meta', 'ctrl', 'shift'].includes(m as string))
-      ? t('diag.key', { key: [key || t('diag.typed'), ...(mods as string[]).slice(0, 3)].join(' · ') }) : ''
-    const done = async () => { if (probe) try { await $.ui.toast(probe) } catch { /* only a diagnostic */ } return next(e) }
-    if (typeof data.draft === 'string') {
-      drafts.set(sessionId, data.draft)
-      const pt = pasted.get(sessionId)
-      if (pt && data.draft.includes(pt.text)) { pasted.delete(sessionId); $.ui.invalidate('ui.render') } // the field took it
-    }
-    if (data.pasteImage) { // Cmd+V in the field: an image on the clipboard joins the next message, else its text goes in the field
-      const f = hasSips !== false ? await clipboardImage($) : null
-      const pic = f ? await thumb($, { path: f }) : null // awaited before the list is read: two quick pastes keep both
-      if (f) { attached.set(sessionId, [...(attached.get(sessionId) ?? []), { path: f, pic }]); $.ui.invalidate('ui.render'); await $.ui.toast(t('toast.attached')) }
-      const text = f ? '' : await clipboardText($)
-      if (text) { pasted.set(sessionId, { n: ++pasteN, text }); $.ui.invalidate('ui.render') }
-      else if (!f && hasSips === false && !toldNoSips) { toldNoSips = true; await $.ui.toast(t('toast.noSips')) }
-    }
-    if (typeof data.menu === 'boolean' && data.menu !== menuOpen) { menuOpen = data.menu; $.ui.invalidate('ui.render') }
-    if (typeof data.copy === 'string') await $.ui.copy({ text: data.copy, surface: e.surface }).catch(() => {})
-    if (typeof data.send === 'string' && (data.send.trim() || attached.get(sessionId)?.length)) {
-      if (usable(await read($, world))?.depts.find(d => d.id === sessionId)?.asleep) { await $.ui.toast(t('toast.asleep')); return done() }
-      if (isReload(data.send)) { await redirectReload($, sessionId); return done() } // never sent: only typed in that chat does it work
-      const cmd = await commandThere($, sessionId, data.send.trim())
-      if (cmd) { // not sent: Enter emptied the field, so its text goes back in
-        pasted.set(sessionId, { n: ++pasteN, text: data.send.trim() })
-        $.ui.invalidate('ui.render')
-        await holdCommand($, sessionId, data.send.trim(), cmd, e.surface)
-        return done()
-      }
-      const r = relayed(sessionId, data.send.trim())
-      drafts.delete(sessionId)
-      pasted.delete(sessionId)
-      const pics = attached.get(sessionId) ?? [], files = pics.map(a => a.path)
-      attached.delete(sessionId)
-      if (menuOpen) { menuOpen = false; $.ui.invalidate('ui.render') }
-      const to = r?.to ?? agentName(`${sessionId}-jefe`)
-      const sent = withImages(r?.text ?? data.send.trim(), files)
-      const out = await outOf($, sessionId, data.send.trim(), sent, r?.to).catch(() => null), sub = await subOutOf($, r?.agent, data.send.trim()).catch(() => null)
-      // Enter emptied the field: a failed send puts the text and its images back.
-      const back = () => { unsend($, sessionId, data.send!.trim(), pics); return $.ui.toast(t('toast.sendFailed')) }
-      await sendMsg($, sessionId, sent, back).then(() => { queueOut($, out); queueSub($, sub); return $.ui.toast(t('toast.sentTo', { name: to })) }, back).catch(() => {})
-    }
-
-    return done()
+    return fieldPost($, e, () => next(e))
+  })
+  // The engine's own Input stands in for field.tsx while the pane speaks Korean: the field takes single keys
+  // (surface.onKey), which carry no IME composition, so Hangul never reaches it. Its edits and Enter go the field's way.
+  on('ui.input', { component: 'Pane', requestId: PANE }, async ($, e, next) => {
+    if (!e.element.startsWith('input-')) return next(e)
+    await useLang($)
+    const data = e.kind === 'submit' ? { send: e.value } : { draft: e.value }
+    await fieldPost($, { element: `field-${e.element.slice('input-'.length).replace(/~\d+$/, '')}`, data, surface: e.surface }, async () => undefined)
+    return next(e)
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
@@ -1870,7 +1885,7 @@ export function register(on: On, options: PluginOptions) {
       )
     }
 
-    const { Box, Text, Svg, Button, Code, Link, Client } = $.ui.resolve(e)
+    const { Box, Text, Svg, Button, Code, Link, Client, Input } = $.ui.resolve(e)
     if (imagesArmed) { if (imagesArmed.keep) imagesArmed.keep = false; else imagesArmed = null } // an unrelated redraw disarms it
     if (orderArmed) { if (orderArmed.keep) orderArmed.keep = false; else orderArmed = null }
     // The disk screen: what the last measure said; a new one starts in the background when due.
@@ -3149,12 +3164,22 @@ export function register(on: On, options: PluginOptions) {
                     <Box flexDirection="row" gap="xs" alignItems={menuOpen ? 'flex-start' : 'center'}>
                       {face('me', 'me', 36, t('chat.you'))}
                       <Box key={`wrap-field-${dept.id}`} width={0} flexGrow={1} minWidth={0} overflow="hidden">
-                        <Client
+                        {getLang() === 'ko' ? (
+                          // Korean: the engine's Input, which takes IME text (see the ui.input hook); a new key per send
+                          // draws it empty. No slash menu or image paste here.
+                          <Input
+                            key={`input-${dept.id}~${sentCount}`}
+                            placeholder={dept.asleep ? t('field.asleep') : relayTo ? t('field.to', { name: relayTo.name, hint: '' }).trimEnd() : t('field.to', { name, hint: permWait(dept.id) ? t('field.afterPerm') : busy(dept.id) ? t('field.busy') : '' }).trimEnd()}
+                            value={pasted.get(dept.id)?.text ?? drafts.get(dept.id) ?? ''}
+                            submitLabel={t('send')}
+                            onSubmit={() => {}}
+                          />
+                        ) : <Client
                           key={`field-${dept.id}`}
                           module="./field.tsx"
                           props={{ placeholder: dept.asleep ? t('field.asleep') : relayTo ? t('field.to', { name: relayTo.name, hint: '' }).trimEnd() : t('field.to', { name, hint: permWait(dept.id) ? t('field.afterPerm') : busy(dept.id) ? t('field.busy') : t('field.hint') }), mine: t('field.mine'), more: t('field.more'), bg: '#151514', ink: '#ecebe8', dim: '#8e8b85', line: '#3a3936', focus: '#b9c6d8', sel: '#3d4a5c', clear: sentCount, ...(pasted.has(dept.id) ? { insert: pasted.get(dept.id)! } : {}), cmds, ...tinted('field') }}
                           width="100%"
-                        />
+                        />}
                       </Box>
                       {/* Send centred on the field (two lines when its placeholder wraps): the strip's own Box sits at
                           flex-start, so its wrapper takes the row's alignment; flex-start while the slash menu is open. */}
