@@ -3168,14 +3168,15 @@ export function register(on: On, options: PluginOptions) {
                       // as wide as the card, Send under it. A new key per send draws it empty; `value` only when text
                       // must go back in (a failed send), since a redraw with the last draft heard would undo the newest
                       // keys. No slash menu or image paste here.
-                      <Box flexDirection="column" gap="xs">
-                        <Box key={`wrap-field-${dept.id}`} width="100%">
+                      // Column Boxes that stretch: in a row Box the Input keeps its own narrow width.
+                      <Box flexDirection="column" alignItems="stretch" width="100%" gap="xs">
+                        <Box key={`wrap-field-${dept.id}`} width="100%" flexDirection="column" alignItems="stretch">
                           <Input
                             key={`input-${dept.id}~${sentCount}`}
                             placeholder={dept.asleep ? t('field.asleep') : relayTo ? t('field.to', { name: relayTo.name, hint: '' }).trimEnd() : t('field.to', { name, hint: permWait(dept.id) ? t('field.afterPerm') : busy(dept.id) ? t('field.busy') : '' }).trimEnd()}
                             {...(pasted.has(dept.id) ? { value: pasted.get(dept.id)!.text } : {})}
                             rows={3}
-                            submitLabel={t('send')}
+                            submitLabel="Enter" // the Input's own hint beside it; the Send button is the strip under it
                             onSubmit={() => {}}
                           />
                         </Box>
