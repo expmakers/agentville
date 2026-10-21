@@ -1,6 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import type { Lang } from '../hooks/i18n'
+import { t } from '../hooks/i18n'
 import { TOUR_STEP_IDS, floorView, initialWorld, rowsOf, tourTargets, viewOf } from '../hooks/scene'
 import type { AgentvilleWorld } from '../types'
 import type { TourStep } from '../hooks/scene'
@@ -69,7 +70,10 @@ const MOCK: { T: Record<string, unknown>; rects: { step: number; lang: string; c
         ["Una de mis skills","El Jefe pasa cada cambio por la skill que elijas."],
         ["Sin flujo de equipo","El Jefe trabaja como Claude Code normal."]
       ],
-      "langs": [["Español","Todo el panel en español.","ES"],["English","The whole panel in English.","EN"]],
+      "langs": [
+        ["Español","Todo el panel en español.","ES"], ["English","The whole panel in English.","EN"],
+        ["한국어","패널 전체를 한국어로.","KO"]
+      ],
       "always": "Abrir siempre", "alwaysOn": "Se abre en todas tus sesiones.",
       "alwaysOff": "Solo se abre donde escribes /agentville.", "color": "Color del panel",
       "pals": ["Lobby cálido","Noche","Hotel"],
@@ -127,7 +131,10 @@ const MOCK: { T: Record<string, unknown>; rects: { step: number; lang: string; c
         ["One of my skills","The Lead runs every change through the skill you pick."],
         ["No team flow","The Lead works like plain Claude Code."]
       ],
-      "langs": [["Español","Todo el panel en español.","ES"],["English","The whole panel in English.","EN"]],
+      "langs": [
+        ["Español","Todo el panel en español.","ES"], ["English","The whole panel in English.","EN"],
+        ["한국어","패널 전체를 한국어로.","KO"]
+      ],
       "always": "Always open", "alwaysOn": "Opens in all your sessions.",
       "alwaysOff": "Opens only where you type /agentville.", "color": "Panel colour",
       "pals": ["Warm lobby","Night","Hotel"],
@@ -141,8 +148,8 @@ const MOCK: { T: Record<string, unknown>; rects: { step: number; lang: string; c
     {
       "step": 1, "lang": "es",
       "c": {
-        "lang-es": [180,283.2,240,62.55], "lang-en": [428,283.2,240,62.55], "tour-skip": [180,375.74,39.44,25],
-        "tour-next": [576.03,372.74,91.97,31]
+        "lang-es": [180,274.43,157.33,80.09], "lang-en": [345.33,274.43,157.33,80.09], "lang-ko": [510.66,274.43,157.33,80.09],
+        "tour-skip": [180,384.52,39.44,25], "tour-next": [576.03,381.52,91.97,31]
       }
     },
     {"step":2,"lang":"es","c":{"tour-back":[307.19,206.48,64.91,25],"tour-next":[378.09,206.48,94.5,25]}},
@@ -179,8 +186,8 @@ const MOCK: { T: Record<string, unknown>; rects: { step: number; lang: string; c
     {
       "step": 1, "lang": "en",
       "c": {
-        "lang-es": [180,283.2,240,62.55], "lang-en": [428,283.2,240,62.55], "tour-skip": [180,375.74,30.08,25],
-        "tour-next": [604.42,372.74,63.58,31]
+        "lang-es": [180,274.43,157.33,80.09], "lang-en": [345.33,274.43,157.33,80.09], "lang-ko": [510.66,274.43,157.33,80.09],
+        "tour-skip": [180,384.52,30.08,25], "tour-next": [604.42,381.52,63.58,31]
       }
     },
     {"step":2,"lang":"en","c":{"tour-back":[307.19,206.48,55.06,25],"tour-next":[368.25,206.48,66.02,25]}},
@@ -249,12 +256,15 @@ const MOCK: { T: Record<string, unknown>; rects: { step: number; lang: string; c
 // The English copy above reads Lead where the mock said Jefe (English is the primary language); same length, same layout.
 // The guide above is named Gem in both languages, a shorter name than the mock's; the mock's line counts still hold.
 // Step 8 above says R rejects and A opens the chat to approve (1.1.0: the pane never approves); still 4 lines in each language.
+// Korean added a third language tile: step 1's rects above are the three-tile modal (tourlayout.ts), and `langs` holds KO.
+// The mock has no Korean, so the mock checks run on MOCK_LANGS; the rest run on all three languages.
 
 // The demo house the judge harness compares with the approved mock (export-mod.mjs builds the same options).
 const NOW = Date.UTC(2026, 9, 18, 12)
 // The mock's steps (its rects are numbered by them); the chat step came after it and is checked in tourplace.test.ts.
 const STEPS: TourStep[] = ['lang', 'island', 'jefe', 'team', 'board', 'screen', 'lobby', 'despacho', 'flow', 'prefs', 'done']
-const LANGS: Lang[] = ['es', 'en']
+const MOCK_LANGS: Lang[] = ['es', 'en']
+const LANGS: Lang[] = ['es', 'en', 'ko']
 const demo = (lang: Lang): TourOverlayOpts[] => {
   const v = floorView(initialWorld(NOW), 0), tg = tourTargets(v, NOW), view = viewOf(rowsOf(v))
   const name = v.depts.find((d) => d.id === tg.focusId)?.name ?? ''
@@ -291,7 +301,7 @@ const movedBy = (v: AgentvilleWorld, step: string): [number, number] => {
 
 test('hit rects match the mock\'s controls within 1 CSS px, same keys, every step and language', () => {
   const v = floorView(initialWorld(NOW), 0)
-  for (const lang of LANGS) for (const o of demo(lang)) {
+  for (const lang of MOCK_LANGS) for (const o of demo(lang)) {
     const [mx, my] = movedBy(v, o.step)
     const want = Object.fromEntries(Object.entries(MOCK.rects.find((r) => r.lang === lang && r.step === o.n)!.c).map(([k, r]) => [k, [r[0]! + mx, r[1]! + my, r[2]!, r[3]!]]))
     const got = Object.fromEntries(tourOverlay(o).hits.map((ht) => [ht.key, [ht.x0 * o.view.w, ht.y0 * o.view.ht, (ht.x1 - ht.x0) * o.view.w, (ht.y1 - ht.y0) * o.view.ht]]))
@@ -327,10 +337,18 @@ test('the wrap model breaks lines where Chrome does: 22 bubble texts and 10 offi
 })
 
 test('the copy is the mock\'s, and the layout was measured with it', () => {
-  for (const lang of LANGS) {
-    expect(tourCopy(lang)).toEqual(MOCK.T[lang] as unknown as ReturnType<typeof tourCopy>)
-    expect(copyHash(JSON.stringify(tourCopy(lang)))).toBe(TOUR_LAYOUT.copyHash[lang])
-  }
+  for (const lang of MOCK_LANGS) expect(tourCopy(lang)).toEqual(MOCK.T[lang] as unknown as ReturnType<typeof tourCopy>)
+  for (const lang of LANGS) expect([lang, copyHash(JSON.stringify(tourCopy(lang)))]).toEqual([lang, TOUR_LAYOUT.copyHash[lang]])
+})
+
+test('Korean: the bubbles wrap as Chrome drew them, and the language step shows three tiles with KO picked', () => {
+  // Line counts Chrome on Windows drew (Malgun Gothic Hangul, keep-all) for steps 2 to 8 and the chat step.
+  const c = tourCopy('ko'), says = [...c.s.slice(1, 8).map((st) => st.say), t('tour.chat.say', undefined, 'ko')]
+  expect(says.map((say) => wrapLines(`${c.guide}: ${say}`, 320, c.guide.length + 1).length)).toEqual([2, 3, 2, 2, 3, 2, 4, 2])
+  const r = tourOverlay({ ...demo('ko')[0]! })
+  expect(['lang-es', 'lang-en', 'lang-ko'].every((k) => r.hits.some((h) => h.key === k))).toBe(true)
+  expect(r.svg.includes('data-k="lang-ko" aria-pressed="true"')).toBe(true)
+  expect(r.svg.includes('word-break:keep-all')).toBe(true)
 })
 
 

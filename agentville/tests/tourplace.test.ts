@@ -19,9 +19,9 @@ const oneRow = (n: number) => {
 }
 const cuts = (a: TourRect, b: TourRect) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3]
 const SPOT = ['island', 'jefe', 'team', 'board', 'screen', 'lobby', 'despacho'] as const
-const LANGS: Lang[] = ['es', 'en']
+const LANGS: Lang[] = ['es', 'en', 'ko']
 
-test('blocker 2: on a 1-row map the bubble never covers its target, any step, any focus office of 1 to 4, both languages', () => {
+test('blocker 2: on a 1-row map the bubble never covers its target, any step, any focus office of 1 to 4, every language', () => {
   let seen = 0
   for (let n = 1; n <= 4; n++) {
     const v = oneRow(n), view = viewOf(rowsOf(v))
@@ -66,7 +66,7 @@ test('AG: the chat step lights its own sample row at the bottom-left; the bubble
     const row = r.svg.match(/<div style="position:absolute;left:(\d+)px;top:([\d.]+)px;width:([\d.]+)px;height:(\d+)px/)!.slice(1).map(Number) as [number, number, number, number]
     const tg: TourRect = [row[0] / view.w, row[1] / view.ht, (row[0] + row[2]) / view.w, (row[1] + row[3]) / view.ht]
     expect([lang, cuts(r.card!, tg), r.card![1] >= 0.1, r.card![3] <= 0.97, tg[0] < 0.1, tg[3] <= 1]).toEqual([lang, false, true, true, true, true])
-    expect([r.svg.includes('Oficina 0'), r.svg.includes('↗'), r.alt.includes(lang === 'es' ? 'Ir al chat' : 'Go to a chat')]).toEqual([true, true, true])
+    expect([r.svg.includes('Oficina 0'), r.svg.includes('↗'), r.alt.includes({ es: 'Ir al chat', en: 'Go to a chat', ko: '채팅으로 가기' }[lang])]).toEqual([true, true, true])
     expect(r.svg.length < 131072 && !r.svg.includes(String.fromCharCode(0x2014))).toBe(true)
     expect(tourOverlay({ step: 'chat', n: 9, total: 12, lang, view, name: 'a\x07b\x1f<c>' }).svg.includes('ab&lt;c&gt;')).toBe(true) // control characters dropped
   }

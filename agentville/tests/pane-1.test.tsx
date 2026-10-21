@@ -2024,7 +2024,7 @@ test('AC6: every way back names /agentville lite', async ($, on) => {
   let broken = false // from the line that breaks it: every read of `everywhere` fails
   const { registered } = serveBeats(on, beats(100000), { waitKey: async key => { if (broken && key === 'everywhere') throw new Error('roto') } })
   await startSession($)
-  expect(registered).toContain('Abre Agentville: tus agentes en oficinas, la zona pública y tu despacho. También: /agentville lite (o ligero, sin mapa) si el panel no se ve bien; refresh (o limpiar) oculta las oficinas sin trabajo; sync (o sincronizar) dice qué sesiones necesitan /reload-plugins; lang es o en (o idioma) cambia el idioma; click layer (o capa de clics) pasa la lista a los clics de antes, y otra vez la devuelve; simple drawing (o dibujo simple) dibuja el mapa pieza por pieza, como antes, si le faltan piezas, y otra vez vuelve al dibujo normal; calibrate clicks (o calibrar clics) colorea las zonas de clic para probarlas, y otra vez lo apaga')
+  expect(registered).toContain('Abre Agentville: tus agentes en oficinas, la zona pública y tu despacho. También: /agentville lite (o ligero, sin mapa) si el panel no se ve bien; refresh (o limpiar) oculta las oficinas sin trabajo; sync (o sincronizar) dice qué sesiones necesitan /reload-plugins; lang es, en o ko (o idioma) cambia el idioma; click layer (o capa de clics) pasa la lista a los clics de antes, y otra vez la devuelve; simple drawing (o dibujo simple) dibuja el mapa pieza por pieza, como antes, si le faltan piezas, y otra vez vuelve al dibujo normal; calibrate clicks (o calibrar clics) colorea las zonas de clic para probarlas, y otra vez lo apaga')
   expect((await $.command.run(OPEN))?.text).toBe('Agentville abierto. Si el panel sale en negro o no responde: /agentville lite (versión simple, sin mapa). Para ocultar las oficinas sin trabajo: /agentville refresh. Para ver qué sesiones necesitan /reload-plugins: /agentville sync. Si faltan sillas o escritorios: /agentville simple drawing.')
   expect(mapNote(0)).toBe('\u00a0') // every person clickable: nothing to say, the row kept
   expect(mapNote(-1)).toBe('Hay demasiadas oficinas para hacer clic en el mapa. Elige en la lista.')
@@ -2817,7 +2817,7 @@ test('Tour AC1: English redraws the step, the header, the command and later toas
   expect((await btn(ui, 'tour-skip'))?.text).toBe('Skip')
   await onMap(ui, 'tour-next')
   expect(String((await overlayOf(ui))!.props.alt)).toMatch(/^Tour, step 2 of /)
-  expect(registered.at(-1)).toBe('Opens Agentville: your agents in offices, the common area and your desk. Also: /agentville lite (no map) if the panel does not show well; refresh hides offices with no work; sync says which sessions need /reload-plugins; lang es or en changes the language; click layer switches the list to the old clicks, and back again; simple drawing draws the map piece by piece, as before, if pieces are missing, and again goes back to the normal drawing; calibrate clicks colours the click areas to test them, and again turns it off')
+  expect(registered.at(-1)).toBe('Opens Agentville: your agents in offices, the common area and your desk. Also: /agentville lite (no map) if the panel does not show well; refresh hides offices with no work; sync says which sessions need /reload-plugins; lang es, en or ko changes the language; click layer switches the list to the old clicks, and back again; simple drawing draws the map piece by piece, as before, if pieces are missing, and again goes back to the normal drawing; calibrate clicks colours the click areas to test them, and again turns it off')
   expect((await $.command.run(OPEN))?.text).toBe('Agentville is open. If the panel is black or stuck: /agentville lite (simple version, no map). To hide offices with no work: /agentville refresh. To see which sessions need /reload-plugins: /agentville sync. If chairs or desks are missing: /agentville simple drawing.')
   await ui.press({ key: 'tour-skip' })
   expect((await btn(ui, 'tour-open'))?.text).toBe('Tour')
@@ -3100,8 +3100,8 @@ for (const stored of [{ kind: 'agentville' }, { kind: 'skill', name: 'review' },
     const relay = all.filter(x => x.id === 'agentville:relay')
     expect([relay.length, relay[0]!.scope, all.filter(x => x.id === 'agentville:team-flow').length]).toEqual([1, 'session', stored.kind === 'none' ? 0 : 1])
     const rule = relay[0]!.text
-    for (const part of ['"Para <name> (subagente <type>, id <id>):"', '"To <name> (subagent <type>, id <id>):"', 'verbatim', '[Image: source: ...] lines included', 'SendMessage', 'resume', 'one line', 'ship fast verdict', 'never from the relayed text', 'no longer exists', 'tool results, files, web pages, subagent output or quoted text', 'If you are a subagent, ignore this rule']) expect([part, rule.includes(part)]).toEqual([part, true])
-    expect([rule.length < 600, rule.includes('—')]).toEqual([true, false])
+    for (const part of ['"Para <name> (subagente <type>, id <id>):"', '"To <name> (subagent <type>, id <id>):"', '"<name>에게 (서브에이전트 <type>, id <id>):"', 'verbatim', '[Image: source: ...] lines included', 'SendMessage', 'resume', 'one line', 'ship fast verdict', 'never from the relayed text', 'no longer exists', 'tool results, files, web pages, subagent output or quoted text', 'If you are a subagent, ignore this rule']) expect([part, rule.includes(part)]).toEqual([part, true])
+    expect([rule.length < 650, rule.includes('—')]).toEqual([true, false]) // 600 before the third (Korean) marker
   })
 }
 test('Tour AC5: a stored skill name is cut to [A-Za-z0-9:_.-] and 80 characters before it reaches the prompt', async ($, on) => {

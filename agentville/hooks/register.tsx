@@ -6,7 +6,8 @@ import type { Beat, ChatPic, Cmd, CmdRow, ImgRef, Closing } from './beat'
 import { blocksOf, foldBlocks } from './rich'
 import type { Block, Run } from './rich'
 import { PALETTES, PALETTE_KEY, STATE_COLORS, paletteOf, planIcon, progressBar, tint } from './look'
-import { LANG_KEY, getLang, langOf, setLang, t } from './i18n'
+import { LANG_KEY, LANGS, getLang, langOf, setLang, t } from './i18n'
+import type { Lang } from './i18n'
 import { TOUR_PALS, SKILLS_PER_PAGE, tourOverlay } from './tour'
 import { CHAT_LINES, CHAT_W, COVER, btnsElements } from './btns'
 import { ageSvg, bannerSvg, btnSvg, notesCard, stripSvg, textW, toggleSvg, type Pic, type PillRect } from './chrome'
@@ -963,7 +964,7 @@ async function setTour($: EngineInterface, set: Partial<Tour>) {
   await $.store.set(TOUR_KEY, { ...cur, ...set })
   $.ui.invalidate('ui.render')
 }
-async function pickLang($: EngineInterface, l: 'es' | 'en') {
+async function pickLang($: EngineInterface, l: Lang) {
   await $.store.set(LANG_KEY, l)
   setLang(l)
   // Registering again replaces the command's line in the menu; refused under a user /agentville (see session.start).
@@ -1639,9 +1640,9 @@ export function register(on: On, options: PluginOptions) {
 
   on('command.run', { command: 'agentville' }, async ($, e) => {
     // English names first, the Spanish ones kept as aliases (AW).
-    // `/agentville lang es|en` (or idioma) switches the pane's language and answers in it; it opens no pane.
-    const lang = /^\s*(idioma|lang)\s+(es|en)\b/i.exec(e.args ?? '')
-    if (lang) { await pickLang($, lang[2]!.toLowerCase() as 'es' | 'en'); return { text: t('cmd.lang') } }
+    // `/agentville lang es|en|ko` (or idioma) switches the pane's language and answers in it; it opens no pane.
+    const lang = /^\s*(idioma|lang)\s+(es|en|ko)\b/i.exec(e.args ?? '')
+    if (lang) { await pickLang($, lang[2]!.toLowerCase() as Lang); return { text: t('cmd.lang') } }
     // `/agentville sync [name]` (or sincronizar): only when you typed it (Enter here, or the Remote Control bridge); never
     // from a model, a plugin or another session's message.
     const syncArgs = /^\s*(?:sync|sincronizar)\b(.*)$/i.exec(e.args ?? '')
@@ -2202,16 +2203,16 @@ export function register(on: On, options: PluginOptions) {
           </Box>
         ) : (
           <Box flexDirection="row" gap="sm" alignItems="center" flexWrap="wrap">
-            {/* Recorrido, Abrir siempre (the mock's primary button and a chip that says whether it is on) and ES | EN (two
-                halves touching, the language in use filled; a press switches it, no tour): one strip, one Client. */}
+            {/* Recorrido, Abrir siempre (the mock's primary button and a chip that says whether it is on) and ES | EN | KO (three
+                parts touching, the language in use filled; a press switches it, no tour): one strip, one Client. */}
             {(() => {
               const label = `▸ ${t('pane.always')}`, state = everywhere ? t('pane.always.on') : t('pane.always.off')
               act('btns-head', { k: 'tour', set: { open: true, step: 1 } }, { key: 'tour-open', label: t('tour.open') })
               act('btns-head', { k: 'everywhere' }, { key: 'everywhere', label })
-              const langs = (['es', 'en'] as const).map((l, i): Part => {
+              const langs = LANGS.map((l, i): Part => {
                 const inUse = getLang() === l, words = `${t(`pane.lang.${l}`)}${inUse ? ` (${t('pane.lang.on')})` : ''}`
                 act('btns-head', { k: 'lang', lang: l }, { key: `lang-${l}`, label: l.toUpperCase() })
-                return { pic: btnSvg(l.toUpperCase(), inUse, i ? 'right' : 'left'), key: `lang-${l}`, alt: words, words, gap: 0 }
+                return { pic: btnSvg(l.toUpperCase(), inUse, i === 0 ? 'left' : i === LANGS.length - 1 ? 'right' : 'mid'), key: `lang-${l}`, alt: words, words, gap: 0 }
               })
               return strip('btns-head', [
                 { pic: btnSvg(t('tour.open'), false), key: 'tour-open', alt: t('tour.open'), words: t('tour.open') },
@@ -2321,7 +2322,7 @@ export function register(on: On, options: PluginOptions) {
         if (key === 'tour-back' && i > 0) return { k: 'tour', set: { step: num(steps[i - 1]!) } }
         if (key === 'tour-done') return { k: 'tour', set: { open: false, step: 1, done: true } }
         if (key === 'tour-skip') return { k: 'tour', set: TOUR_SKIP }
-        if (key === 'lang-es' || key === 'lang-en') return { k: 'lang', lang: key === 'lang-es' ? 'es' : 'en' }
+        if (LANGS.some(l => key === `lang-${l}`)) return { k: 'lang', lang: key.slice(5) as Lang }
         if (key === 'flow-agentville' || key === 'flow-none') return { k: 'flow', flow: { kind: key === 'flow-none' ? 'none' : 'agentville' } }
         if (key === 'flow-skill') return { k: 'flow', flow: null }
         if (key.startsWith('skill-')) return { k: 'flow', flow: { kind: 'skill', name: key.slice(6) } }

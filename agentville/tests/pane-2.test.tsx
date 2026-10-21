@@ -1760,7 +1760,7 @@ test('the header ES | EN switch: the language in use filled; a press switches th
   const head = async () => (await ui.findAll({ type: 'Svg' })).find(x => /Idioma: Español|Language: English/.test(String(x.props.alt)))!
   const runs = async () => ((await ui.findAll({ type: 'Client' })).find(c => c.key === 'btns-head~0')!.props.props as BandP).runs.map(r => r[1])
   expect((await ui.findAll({ type: 'Client' })).filter(c => c.key?.startsWith('btns-head')).map(c => c.key)).toEqual(['btns-head~0'])
-  expect((await runs()).filter(Boolean)).toEqual(['tour-open', 'everywhere', 'lang-es', 'lang-en'])
+  expect((await runs()).filter(Boolean)).toEqual(['tour-open', 'everywhere', 'lang-es', 'lang-en', 'lang-ko'])
   expect((await runs()).indexOf('lang-en')).toBe((await runs()).indexOf('lang-es') + 1)
   expect(String((await head()).props.alt)).toContain('Idioma: Español (en uso) · Language: English')
   expect(String((await head()).props.source)).toContain('class="btn primary" style="border-radius:5px 0 0 5px"')
@@ -1776,6 +1776,9 @@ test('the header ES | EN switch: the language in use filled; a press switches th
   expect(store.lang).toBe('en')
   await ui.post({ press: 'lang-es' }, { in: 'btns-head~0' })
   expect([store.lang, (await btn(ui, 'tour-open'))?.text]).toEqual(['es', 'Recorrido'])
+  expect(String((await head()).props.source)).toContain('class="btn" style="border-radius:0"') // EN sits between ES and KO
+  await ui.post({ press: 'lang-ko' }, { in: 'btns-head~0' })
+  expect([store.lang, (await btn(ui, 'tour-open'))?.text, String((await head()).props.alt).includes('언어: 한국어 (사용 중)')]).toEqual(['ko', '둘러보기', true])
   await ui.unmount()
 })
 
@@ -1786,6 +1789,9 @@ test('/agentville idioma en and /agentville lang es switch the language and open
   expect(store.lang).toBe('en')
   expect((await $.command.run({ ...OPEN, args: 'lang ES' }))?.text).toBe('Idioma del panel: español.')
   expect(store.lang).toBe('es')
+  expect((await $.command.run({ ...OPEN, args: 'lang ko' }))?.text).toBe('패널 언어: 한국어.')
+  expect(store.lang).toBe('ko')
+  expect((await $.command.run({ ...OPEN, args: 'lang es' }))?.text).toBe('Idioma del panel: español.')
   expect(panes.length).toBe(0)
   expect((await $.command.run(OPEN))?.text).toBe('Agentville abierto. Si el panel sale en negro o no responde: /agentville lite (versión simple, sin mapa). Para ocultar las oficinas sin trabajo: /agentville refresh. Para ver qué sesiones necesitan /reload-plugins: /agentville sync. Si faltan sillas o escritorios: /agentville simple drawing.')
 })
@@ -1814,9 +1820,9 @@ test('AW: every /agentville subcommand runs by its English name and by its Spani
 })
 
 test('AW: the help text names the English subcommands first, in both languages; the ways back name no Spanish alias', () => {
-  const pairs = [['/agentville lite', 'ligero'], ['refresh', 'limpiar'], ['sync', 'sincronizar'], ['lang es or en', 'idioma'], ['click layer', 'capa de clics'], ['simple drawing', 'dibujo simple'], ['calibrate clicks', 'calibrar clics']]
+  const pairs = [['/agentville lite', 'ligero'], ['refresh', 'limpiar'], ['sync', 'sincronizar'], ['lang es, en or ko', 'idioma'], ['click layer', 'capa de clics'], ['simple drawing', 'dibujo simple'], ['calibrate clicks', 'calibrar clics']]
   for (const d of STRINGS['cmd.description']) for (const [en, es] of pairs) {
-    const at = d.indexOf(en!.replace(' or ', d === STRINGS['cmd.description'][0] ? ' o ' : ' or '))
+    const at = d.indexOf(en!.replace(' or ', d === STRINGS['cmd.description'][0] ? ' o ' : d === STRINGS['cmd.description'][2] ? ' 또는 ' : ' or '))
     expect([en, at >= 0, d.includes(es!) ? at < d.indexOf(es!) : true]).toEqual([en, true, true])
   }
   expect(STRINGS['cmd.description'][1]).not.toMatch(/ligero|limpiar|sincronizar|idioma|capa de clics|dibujo simple|calibrar/) // English UI: English names only

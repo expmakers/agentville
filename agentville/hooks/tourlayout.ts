@@ -6,14 +6,19 @@
 // Gem, a shorter name than the mock's (the line counts and fit checks in tourOverlay.test.ts still hold), so copyHash
 // is that copy's hash. A third (1.1.0): the despacho step says R rejects and A opens the chat to approve, in the same 4
 // lines in both languages. Regenerate when the harness runs again. Since 1.1.2 the data is written across short lines, the values unchanged.
+// Korean (ko) added by hand: its layout was measured in Chrome on Windows (Hangul and the ▸ and ✓ glyphs come from
+// the system's fonts there), and the language step now holds three tiles (ES, EN, KO), so the es and en lang modals
+// are the old macOS numbers with each tile 157.33 px wide and its body on two lines (17.54 px taller, as on Windows).
+import type { Lang } from './i18n'
+
 export type TourRectPx = [number, number, number, number]
 export type TourModalLayout = { w: number; h: number; c: Record<string, TourRectPx> }
 export const TOUR_LAYOUT: {
-  copyHash: Record<'es' | 'en', string>
+  copyHash: Record<Lang, string>
   pix: { chars: string; w400: number[]; w700: number[]; k400: Record<string, string>; k700: Record<string, string> }
-  lang: Record<'es' | 'en', { bubble: { back: [number, number]; next: [number, number] }; modal: Record<string, TourModalLayout> }>
+  lang: Record<Lang, { bubble: { back: [number, number]; next: [number, number] }; modal: Record<string, TourModalLayout> }>
 } = {
-  "copyHash": {"es":"ece3c22f","en":"d6746105"},
+  "copyHash": {"es":"85d5357b","en":"b1380af9","ko":"6aad7aff"},
   "pix": {
     "chars": " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmno" +
       "pqrstuvwxyz{|}~¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâ" +
@@ -139,10 +144,11 @@ export const TOUR_LAYOUT: {
       "bubble": {"back":[64.91,25],"next":[94.5,25]},
       "modal": {
         "lang": {
-          "w": 524, "h": 294.02,
+          "w": 524, "h": 311.56,
           "c": {
-            "lang-es": [18,161.47,240,62.55], "lang-en": [266,161.47,240,62.55],
-            "tour-skip": [18,254.02,39.44,25], "tour-next": [414.03,251.02,91.97,31]
+            "lang-es": [18,161.47,157.33,80.09], "lang-en": [183.33,161.47,157.33,80.09],
+            "lang-ko": [348.66,161.47,157.33,80.09], "tour-skip": [18,271.56,39.44,25],
+            "tour-next": [414.03,268.56,91.97,31]
           }
         },
         "flow": {
@@ -267,10 +273,11 @@ export const TOUR_LAYOUT: {
       "bubble": {"back":[55.06,25],"next":[66.02,25]},
       "modal": {
         "lang": {
-          "w": 524, "h": 294.02,
+          "w": 524, "h": 311.56,
           "c": {
-            "lang-es": [18,161.47,240,62.55], "lang-en": [266,161.47,240,62.55],
-            "tour-skip": [18,254.02,30.08,25], "tour-next": [442.42,251.02,63.58,31]
+            "lang-es": [18,161.47,157.33,80.09], "lang-en": [183.33,161.47,157.33,80.09],
+            "lang-ko": [348.66,161.47,157.33,80.09], "tour-skip": [18,271.56,30.08,25],
+            "tour-next": [442.42,268.56,63.58,31]
           }
         },
         "flow": {
@@ -387,6 +394,135 @@ export const TOUR_LAYOUT: {
           "c": {
             "tour-skip": [18,159.78,30.08,25], "tour-back": [376.86,156.78,55.86,31],
             "tour-done": [440.72,156.78,65.28,31]
+          }
+        }
+      }
+    },
+    "ko": {
+      "bubble": {"back":[54,25],"next":[68.61,25]},
+      "modal": {
+        "lang": {
+          "w": 524, "h": 312.56,
+          "c": {
+            "lang-es": [18,161.47,157.33,80.09], "lang-en": [183.33,161.47,157.33,80.09],
+            "lang-ko": [348.66,161.47,157.33,80.09], "tour-skip": [18,271.56,56,26],
+            "tour-next": [438.92,268.56,67.08,32]
+          }
+        },
+        "flow": {
+          "w": 524, "h": 426.33,
+          "c": {
+            "flow-agentville": [18,147.69,488,64.55], "flow-skill": [18,220.23,488,63.55],
+            "flow-none": [18,291.78,488,63.55], "tour-skip": [18,385.33,56,26],
+            "tour-back": [378.92,382.33,52,32], "tour-next": [438.92,382.33,67.08,32]
+          }
+        },
+        "flow-s0": {
+          "w": 524, "h": 394.83,
+          "c": {
+            "flow-agentville": [18,147.69,488,43], "flow-skill": [18,198.69,488,44],
+            "flow-none": [18,250.69,488,43], "tour-skip": [18,353.83,56,26],
+            "tour-back": [378.92,350.83,52,32], "tour-next": [438.92,350.83,67.08,32]
+          }
+        },
+        "flow-s1": {
+          "w": 524, "h": 404.69,
+          "c": {
+            "flow-agentville": [18,147.69,488,43], "flow-skill": [18,198.69,488,44],
+            "flow-none": [18,250.69,488,43], "skill-0": [18,303.69,158.66,30],
+            "skill-1": [182.66,303.69,158.67,30], "skill-2": [347.33,303.69,158.67,30],
+            "tour-skip": [18,363.69,56,26], "tour-back": [378.92,360.69,52,32],
+            "tour-next": [438.92,360.69,67.08,32]
+          }
+        },
+        "flow-s2": {
+          "w": 524, "h": 440.69,
+          "c": {
+            "flow-agentville": [18,147.69,488,43], "flow-skill": [18,198.69,488,44],
+            "flow-none": [18,250.69,488,43], "skill-0": [18,303.69,158.66,30],
+            "skill-1": [182.66,303.69,158.67,30], "skill-2": [347.33,303.69,158.67,30],
+            "skill-3": [18,339.69,158.66,30], "skill-4": [182.66,339.69,158.67,30],
+            "skill-5": [347.33,339.69,158.67,30], "tour-skip": [18,399.69,56,26],
+            "tour-back": [378.92,396.69,52,32], "tour-next": [438.92,396.69,67.08,32]
+          }
+        },
+        "flow-s2p": {
+          "w": 524, "h": 476.69,
+          "c": {
+            "flow-agentville": [18,147.69,488,43], "flow-skill": [18,198.69,488,44],
+            "flow-none": [18,250.69,488,43], "skill-0": [18,303.69,158.66,30],
+            "skill-1": [182.66,303.69,158.67,30], "skill-2": [347.33,303.69,158.67,30],
+            "skill-3": [18,339.69,158.66,30], "skill-4": [182.66,339.69,158.67,30],
+            "skill-5": [347.33,339.69,158.67,30], "skills-prev": [18,379.69,244,26],
+            "skills-more": [262,379.69,244,26], "tour-skip": [18,435.69,56,26],
+            "tour-back": [378.92,432.69,52,32], "tour-next": [438.92,432.69,67.08,32]
+          }
+        },
+        "flow-s1k": {
+          "w": 524, "h": 415,
+          "c": {
+            "flow-agentville": [18,116,488,43], "flow-skill": [18,167,488,44],
+            "flow-none": [18,219,488,43], "skill-0": [18,272,158.66,30],
+            "skill-1": [182.66,272,158.67,30], "skill-2": [347.33,272,158.67,30],
+            "tour-skip": [18,374,56,26], "tour-back": [378.92,371,52,32],
+            "tour-next": [438.92,371,67.08,32]
+          }
+        },
+        "flow-s2k": {
+          "w": 524, "h": 451,
+          "c": {
+            "flow-agentville": [18,116,488,43], "flow-skill": [18,167,488,44],
+            "flow-none": [18,219,488,43], "skill-0": [18,272,158.66,30],
+            "skill-1": [182.66,272,158.67,30], "skill-2": [347.33,272,158.67,30],
+            "skill-3": [18,308,158.66,30], "skill-4": [182.66,308,158.67,30],
+            "skill-5": [347.33,308,158.67,30], "tour-skip": [18,410,56,26],
+            "tour-back": [378.92,407,52,32], "tour-next": [438.92,407,67.08,32]
+          }
+        },
+        "flow-s2pk": {
+          "w": 524, "h": 487,
+          "c": {
+            "flow-agentville": [18,116,488,43], "flow-skill": [18,167,488,44],
+            "flow-none": [18,219,488,43], "skill-0": [18,272,158.66,30],
+            "skill-1": [182.66,272,158.67,30], "skill-2": [347.33,272,158.67,30],
+            "skill-3": [18,308,158.66,30], "skill-4": [182.66,308,158.67,30],
+            "skill-5": [347.33,308,158.67,30], "skills-prev": [18,348,244,26],
+            "skills-more": [262,348,244,26], "tour-skip": [18,446,56,26],
+            "tour-back": [378.92,443,52,32], "tour-next": [438.92,443,67.08,32]
+          }
+        },
+        "prefs-lobby": {
+          "w": 524, "h": 351.25,
+          "c": {
+            "tour-everywhere": [18,125.91,38,22], "tour-pal-lobby": [18,193.97,115.44,36],
+            "tour-pal-noche": [141.44,193.97,38,36], "tour-pal-hotel": [187.44,193.97,52,36],
+            "tour-skip": [18,310.25,56,26], "tour-back": [378.92,307.25,52,32],
+            "tour-next": [438.92,307.25,67.08,32]
+          }
+        },
+        "prefs-noche": {
+          "w": 524, "h": 351.25,
+          "c": {
+            "tour-everywhere": [18,125.91,38,22], "tour-pal-lobby": [18,193.97,97.31,36],
+            "tour-pal-noche": [123.31,193.97,56.13,36], "tour-pal-hotel": [187.44,193.97,52,36],
+            "tour-skip": [18,310.25,56,26], "tour-back": [378.92,307.25,52,32],
+            "tour-next": [438.92,307.25,67.08,32]
+          }
+        },
+        "prefs-hotel": {
+          "w": 524, "h": 351.25,
+          "c": {
+            "tour-everywhere": [18,125.91,38,22], "tour-pal-lobby": [18,193.97,97.31,36],
+            "tour-pal-noche": [123.31,193.97,38,36], "tour-pal-hotel": [169.31,193.97,70.13,36],
+            "tour-skip": [18,310.25,56,26], "tour-back": [378.92,307.25,52,32],
+            "tour-next": [438.92,307.25,67.08,32]
+          }
+        },
+        "done": {
+          "w": 524, "h": 200.78,
+          "c": {
+            "tour-skip": [18,159.78,56,26], "tour-back": [378.92,156.78,52,32],
+            "tour-done": [438.92,156.78,67.08,32]
           }
         }
       }

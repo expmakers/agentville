@@ -7,7 +7,7 @@ with its team: the Lead (the session's main agent) and its subagents at their de
 lounge, and agents that need your OK walk to your desk and wait in line. From the same panel you reject, answer and
 message every session, and one press takes you to the chat where you approve. The plugin id is `agentville@jandresgarcia`.
 
-The panel speaks English or Spanish: pick the language in the tour's first step, or with `/agentville lang es|en`.
+The panel speaks English, Spanish or Korean: pick the language in the tour's first step, or with `/agentville lang es|en|ko`.
 
 <img src="docs/images/map.png" width="612" alt="The Agentville map with demo data: four offices with their teams at their desks, the common area with resting agents, the Product room, and your desk where two agents wait in line for your OK beside Gem, the Secretary">
 
@@ -46,7 +46,7 @@ The shell install asks nothing: no team flow is on until you pick one in the tou
 1. Start a new desktop session.
 2. Type `/agentville`. The panel opens.
 3. Gem, the Secretary, gives you a short tour of the real map. Its first step picks the language: the panel starts in
-   English, and you can switch with ES | EN in its header or `/agentville lang es|en` any time.
+   English, and you can switch with ES | EN | KO in its header or `/agentville lang es|en|ko` any time.
 4. The step "How do your teams work?" offers "Agentville team flow" (recommended),
    "One of my skills" or "No team flow".
 5. The step "Where it opens" sets "Always open", which opens the panel in every
@@ -80,13 +80,13 @@ The Tour button in the panel's header runs the tour again. More in
    [Team flow](docs/team-flow.md) and [Impact and goals](docs/impact-and-goals.md).
 
 Handy commands, typed after `/agentville`: `lite` (open without the map), `refresh` (hide offices with no work),
-`sync` (bring old sessions up to date), `lang es|en`. Each also has a Spanish name, such as `ligero`. All of them:
+`sync` (bring old sessions up to date), `lang es|en|ko`. Each also has a Spanish name, such as `ligero`. All of them:
 [Commands](docs/using-the-panel.md#commands).
 
 ## Make it yours
 
 - **Palette.** Pick the panel's colour at its foot or in the tour: Warm lobby (the default), Night or Hotel.
-- **Language.** English or Spanish, in the tour or with `/agentville lang es|en`; add your own, see
+- **Language.** English, Spanish or Korean, in the tour or with `/agentville lang es|en|ko`; add your own, see
   [Translate it](#translate-it).
 - **Team flow on or off.** In the tour, choose "Agentville team flow", "One of my skills" or "No team flow"; the Tour
   button runs it again, and the `team_flow` install option works too. A line `Agentville: flow off` in a repository's
@@ -105,25 +105,25 @@ Handy commands, typed after `/agentville`: `lite` (open without the map), `refre
 
 ## Translate it
 
-All panel text lives in one table, `STRINGS` in `agentville/hooks/i18n.ts`. Each entry is a key and a pair
-`[es, en]`: the Spanish text first, the English second.
+All panel text lives in one table, `STRINGS` in `agentville/hooks/i18n.ts`. Each entry is a key and its texts
+`[es, en, ko]`: Spanish first, English second, Korean third.
 
 To change wording:
 
-1. Find the text in `agentville/hooks/i18n.ts` and edit the Spanish or English side of its pair.
-2. Keep every `{placeholder}` (such as `{name}` or `{n}`) on both sides, and use no em dash.
-3. Run `claude plugin test agentville`: a test checks that both sides are filled and have the same placeholders.
+1. Find the text in `agentville/hooks/i18n.ts` and edit the Spanish, English or Korean text.
+2. Keep every `{placeholder}` (such as `{name}` or `{n}`) in every language, and use no em dash.
+3. Run `claude plugin test agentville`: a test checks that every language is filled and has the same placeholders.
 4. Type `/reload-plugins` in a session to see it.
 
 To add a language (a code change today; open a pull request if you want it shipped):
 
-1. In `agentville/hooks/i18n.ts`, add its code to `Lang` and `langOf`, add a third text to every pair in `STRINGS`,
-   and make `t` pick it by index.
-2. In `agentville/hooks/register.tsx`, add the code to the `lang es|en` command and to the ES | EN switch in the
-   panel's header (the `['es', 'en']` lists) and to the relay rule's markers (in the same file), and in
-   `agentville/hooks/tour.ts` to the tour's language step.
-3. The tour's layout in `agentville/hooks/tourlayout.ts` was measured for Spanish and English: give the new
-   language the English layout to start with, and check that its longer texts still fit.
+1. In `agentville/hooks/i18n.ts`, add its code to `Lang` and `langOf`, add its code to `LANGS` (the order of the texts) and
+   a fourth text to every entry in `STRINGS`; `t` picks it by its place in `LANGS`.
+2. In `agentville/hooks/register.tsx`, add the code to the `lang es|en|ko` command. The ES | EN | KO switch in the
+   panel's header, the relay rule's markers (`agentville/hooks/pure.ts`) and the tour's language step follow
+   `LANGS`; add its `tour.lang.<code>` and `pane.lang.<code>` texts.
+3. The tour's layout in `agentville/hooks/tourlayout.ts` was measured for Spanish and English (on macOS) and
+   Korean (on Windows): give the new language the English layout to start with, and check that its longer texts still fit.
 4. Run `claude plugin test agentville` and fix what it reports.
 
 ## Privacy

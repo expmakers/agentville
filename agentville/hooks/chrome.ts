@@ -74,11 +74,11 @@ export function ageSvg(label: (s: number) => string, color: string, at: number) 
   return { w, svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${ht}" width="${w}" height="${ht}" style="font:12px ${esc(BODY)};fill:${esc(color)}"><desc>${at}</desc>${texts.join('')}</svg>` }
 }
 
-/** A button as the mock's .btn (outlined) or .btn.primary (accent): an Svg just as wide as it draws. `half`: one half of
- * a segmented control, its inner corners square, so two drawn side by side touch as one control. */
-export function btnSvg(label: string, primary: boolean, half?: 'left' | 'right') {
+/** A button as the mock's .btn (outlined) or .btn.primary (accent): an Svg just as wide as it draws. `half`: one part of
+ * a segmented control, its inner corners square, so parts drawn side by side touch as one control. */
+export function btnSvg(label: string, primary: boolean, half?: 'left' | 'mid' | 'right') {
   const w = Math.ceil(textW(label) + 20), ht = Math.ceil(L.btnH) + ROOM
-  const r = half === 'left' ? ' style="border-radius:5px 0 0 5px"' : half === 'right' ? ' style="border-radius:0 5px 5px 0"' : ''
+  const r = half === 'left' ? ' style="border-radius:5px 0 0 5px"' : half === 'right' ? ' style="border-radius:0 5px 5px 0"' : half === 'mid' ? ' style="border-radius:0"' : ''
   return pic(w, ht, `<span class="btn${primary ? ' primary' : ''}"${r}>${esc(label)}</span>`)
 }
 

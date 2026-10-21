@@ -1,5 +1,5 @@
 import type { Lang } from './i18n'
-import { t } from './i18n'
+import { LANGS, t } from './i18n'
 import { fontFaceCss } from './pixfont'
 import type { Face } from './pixfont'
 import { TOUR_STEP_IDS } from './scene'
@@ -52,8 +52,9 @@ const esc = (s: string) => s.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '').re
 const n1 = (v: number) => String(Math.round(v * 10) / 10)
 
 // The mock's rules, var() replaced by the light-theme literals (the stage is a fixed scene in every theme), each scoped
-// under .avt so nothing leaks if the Svg is inlined. `.avt` itself is the mock's body plus .stage.
-const CSS = (w: number, ht: number) => `.avt{position:relative;width:${w}px;height:${ht}px;overflow:hidden;font:15px/1.55 ${BODY};color:#1f1e1c}
+// under .avt so nothing leaks if the Svg is inlined. `.avt` itself is the mock's body plus .stage. keep-all (not in the
+// mock): Korean breaks only at spaces, as wrapLines does; it changes nothing for Spanish or English.
+const CSS = (w: number, ht: number) => `.avt{position:relative;width:${w}px;height:${ht}px;overflow:hidden;font:15px/1.55 ${BODY};color:#1f1e1c;word-break:keep-all}
 .avt p{margin:0;max-width:68ch}
 .avt .banner{position:absolute;left:12px;right:12px;top:40px;z-index:4;display:flex;gap:8px 12px;align-items:center;background:#3d301f;border:1px solid #e2a94a;border-radius:8px;padding:8px 10px;color:#ece6dc;font:14px/1.5 ${SF}}
 .avt .banner .dot{width:8px;height:8px;border-radius:50%;background:#e2a94a;flex:none}
@@ -112,12 +113,15 @@ const kernOf = (k: Record<string, string>) => { const m = new Map<string, number
 const ADV = { 400: new Map([...PIX.chars].map((c, i) => [c, PIX.w400[i]!])), 700: new Map([...PIX.chars].map((c, i) => [c, PIX.w700[i]!])) }
 const KERN = { 400: kernOf(PIX.k400), 700: kernOf(PIX.k700) }
 const FALLBACK = PIX.w400[PIX.chars.indexOf('n')]!
+// Pixelify has no Hangul: the browser draws it in the system's Korean face, an em wide (measured in Chrome on Windows,
+// Malgun Gothic). ponytail: one width for every system; measure again if a Mac's face lays Korean bubbles out differently.
+const HANGUL = /[ᄀ-ᇿ㄰-㆏가-힣]/
 /** Width in px of `s` in Pixelify at `size` px; the first `bold` characters at weight 700 (a separate run: no kerning across). */
 export function pixWidth(s: string, size = 14, bold = 0): number {
   let u = 0
   for (let i = 0; i < s.length; i++) {
     const w = i < bold ? 700 : 400, c = s[i]!
-    u += ADV[w].get(c) ?? FALLBACK
+    u += ADV[w].get(c) ?? (HANGUL.test(c) ? 1000 : FALLBACK)
     if (i > 0 && (i < bold) === (i - 1 < bold)) u += KERN[w].get(s[i - 1]! + c) ?? 0
   }
   return (u * size) / 1000
@@ -156,7 +160,7 @@ export function tourCopy(lang: Lang, name = 'Tienda online') {
     s: MOCK_STEPS.map((s) => ({
       title: x(`tour.${s}.title` as 'tour.jefe.title'), say: say(s), ...(s === 'lang' || s === 'flow' ? { body: x(`tour.${s}.body` as 'tour.lang.body') } : {}) })),
     flow: [[x('tour.flow.agentville'), x('tour.flow.agentville.body'), x('tour.flow.agentville.badge')], [x('tour.flow.skill'), x('tour.flow.skill.body')], [x('tour.flow.none'), x('tour.flow.none.body')]],
-    langs: [[x('tour.lang.es'), x('tour.lang.es.body'), x('tour.lang.es.badge')], [x('tour.lang.en'), x('tour.lang.en.body'), x('tour.lang.en.badge')]],
+    langs: LANGS.map((l) => [x(`tour.lang.${l}` as const), x(`tour.lang.${l}.body` as const), x(`tour.lang.${l}.badge` as const)]),
     always: x('tour.always'), alwaysOn: x('tour.alwaysOn'), alwaysOff: x('tour.alwaysOff'), color: x('tour.color'), pals: TOUR_PALS.map((p) => x(`tour.pal.${p}`)),
     privacy: x('tour.privacy'), head: x('tour.open'), waits: x('tour.banner.waits'), text: x('tour.banner.text'), ver: x('banner.ver'),
   }
@@ -215,7 +219,7 @@ export function tourOverlay(o: TourOverlayOpts): { svg: string; alt: string; hit
     const dots = Array.from({ length: o.total }, (_, i) => `<i class="${i === o.n - 1 ? 'on' : ''}"></i>`).join('')
     let inner = '', variant: string = k
     const sk = o.step === 'flow' && o.skills ? o.skills : null
-    if (k === 'lang') inner = `<p>${esc(st.body!)}</p><div class="tiles">${L.langs.map((x, i) => `<button class="tile" data-k="lang-${['es', 'en'][i]}" aria-pressed="${o.lang === ['es', 'en'][i]}"><b><span class="badge">${esc(x[2]!)}</span>${esc(x[0]!)}</b><span>${esc(x[1]!)}</span></button>`).join('')}</div>`
+    if (k === 'lang') inner = `<p>${esc(st.body!)}</p><div class="tiles" style="grid-template-columns:repeat(${LANGS.length},1fr)">${L.langs.map((x, i) => `<button class="tile" data-k="lang-${LANGS[i]}" aria-pressed="${o.lang === LANGS[i]}"><b><span class="badge">${esc(x[2]!)}</span>${esc(x[0]!)}</b><span>${esc(x[1]!)}</span></button>`).join('')}</div>`
     if (k === 'flow') {
       inner = `<p>${esc(st.body!)}</p><div class="tiles" style="grid-template-columns:1fr">${L.flow.map((x, i) => `<button class="tile" data-k="flow-${TOUR_FLOWS[i]}" aria-pressed="${o.flow === TOUR_FLOWS[i]}"><b>${esc(x[0]!)}${x[2] ? ` <span class="badge">${esc(x[2])}</span>` : ''}</b>${sk ? '' : `<span>${esc(x[1]!)}</span>`}</button>`).join('')}</div>`
       if (sk) {

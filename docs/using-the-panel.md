@@ -6,8 +6,8 @@ label.
 ## Language
 
 The panel speaks English or Spanish: you pick the language in the first step of the [tour](#tour), and can change it
-any time with the ES | EN switch in the panel's header (right of Tour and Always open; the language in use is filled)
-or with `/agentville lang es|en` (`/agentville idioma es|en` works too), which answers in one line and opens no panel.
+any time with the ES | EN | KO switch in the panel's header (right of Tour and Always open; the language in use is filled)
+or with `/agentville lang es|en|ko` (`/agentville idioma es|en|ko` works too), which answers in one line and opens no panel.
 Until you pick, it is English.
 
 ## Tour
@@ -41,7 +41,7 @@ skipped.
   the map and its Open leaves the tour for that request. On the tour's Your desk step a sample of that strip (with
   Open; then R rejects and A opens the chat to approve, on the card) shows only while nobody waits.
 - With the panel focused, S goes on (Start on the last step), T goes back and X skips. The arrow keys cannot be used,
-  as the desktop accepts only a letter or a digit as a button's key. These keys are the same in both languages.
+  as the desktop accepts only a letter or a digit as a button's key. These keys are the same in every language.
 
 ## The map
 
@@ -282,7 +282,7 @@ All of these are typed after `/agentville` in a session. Each one also has a Spa
 - No argument: opens the panel.
 - `lite` (or `ligero`, `sin mapa`): opens the panel without the map, and keeps it so until you press "Show the map".
   See [Troubleshooting](troubleshooting.md#if-the-panel-is-blank).
-- `lang es|en` (or `idioma es|en`): changes the language; see [Language](#language).
+- `lang es|en|ko` (or `idioma es|en|ko`): changes the language; see [Language](#language).
 - `refresh` (or `limpiar`): see [Tidy up](#tidy-up).
 - `sync [name]` (or `sincronizar [name]`): see [Update sessions](#update-sessions).
 - `calibrate clicks` (or `calibrar clics`), `calibrate` (or `calibrar`) and `calibrate elements` (or
