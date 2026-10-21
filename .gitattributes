@@ -1,0 +1,5 @@
+# Check out with LF everywhere: a CRLF checkout (Windows, core.autocrlf=true) breaks the YAML frontmatter of the
+# agents and the skill, which then load with their fields dropped.
+* text=auto eol=lf
+*.png binary
+*.woff2 binary
