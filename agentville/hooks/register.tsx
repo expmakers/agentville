@@ -1773,11 +1773,13 @@ export function register(on: On, options: PluginOptions) {
   })
   // The engine's own Input stands in for field.tsx while the pane speaks Korean: the field takes single keys
   // (surface.onKey), which carry no IME composition, so Hangul never reaches it. Its edits and Enter go the field's way.
-  on('ui.input', { component: 'Pane', requestId: PANE }, async ($, e, next) => {
-    if (!e.element.startsWith('input-')) return next(e)
+  // No component/requestId matcher: the desktop's own Input events are matched by this plugin and the key alone.
+  on('ui.input', async ($, e, next) => {
+    const id = e.plugin === 'agentville' ? /(?:^|[:/])input-(.+?)(?:~\d+)?$/.exec(e.element)?.[1] : undefined
+    if (!id) return next(e)
     await useLang($)
     const data = e.kind === 'submit' ? { send: e.value } : { draft: e.value }
-    await fieldPost($, { element: `field-${e.element.slice('input-'.length).replace(/~\d+$/, '')}`, data, surface: e.surface }, async () => undefined)
+    await fieldPost($, { element: `field-${id}`, data, surface: e.surface }, async () => undefined)
     return next(e)
   })
 
