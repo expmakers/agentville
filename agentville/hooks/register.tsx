@@ -3163,30 +3163,40 @@ export function register(on: On, options: PluginOptions) {
                         {btns(attachKey, [act(attachKey, { k: 'unattach', dept: dept.id }, { key: 'unattach', label: t(nAttached > 1 ? 'attach.many' : 'attach.one', { n: nAttached }) })])}
                       </Box>
                     )}
-                    <Box flexDirection="row" gap="xs" alignItems={menuOpen ? 'flex-start' : 'center'}>
-                      {face('me', 'me', 36, t('chat.you'))}
-                      <Box key={`wrap-field-${dept.id}`} width={0} flexGrow={1} minWidth={0} overflow="hidden">
-                        {getLang() === 'ko' ? (
-                          // Korean: the engine's Input, which takes IME text (see the ui.input hook); a new key per send
-                          // draws it empty. No slash menu or image paste here.
+                    {getLang() === 'ko' ? (
+                      // Korean: the engine's Input, which takes IME text (see the ui.input hook), on a row of its own
+                      // as wide as the card, Send under it. A new key per send draws it empty; `value` only when text
+                      // must go back in (a failed send), since a redraw with the last draft heard would undo the newest
+                      // keys. No slash menu or image paste here.
+                      <Box flexDirection="column" gap="xs">
+                        <Box key={`wrap-field-${dept.id}`} width="100%">
                           <Input
                             key={`input-${dept.id}~${sentCount}`}
                             placeholder={dept.asleep ? t('field.asleep') : relayTo ? t('field.to', { name: relayTo.name, hint: '' }).trimEnd() : t('field.to', { name, hint: permWait(dept.id) ? t('field.afterPerm') : busy(dept.id) ? t('field.busy') : '' }).trimEnd()}
-                            value={pasted.get(dept.id)?.text ?? drafts.get(dept.id) ?? ''}
+                            {...(pasted.has(dept.id) ? { value: pasted.get(dept.id)!.text } : {})}
+                            rows={3}
                             submitLabel={t('send')}
                             onSubmit={() => {}}
                           />
-                        ) : <Client
+                        </Box>
+                        <Box key={`send-${dept.id}`} alignSelf="flex-end">{btns(composeKey, compose)}</Box>
+                      </Box>
+                    ) : (
+                    <Box flexDirection="row" gap="xs" alignItems={menuOpen ? 'flex-start' : 'center'}>
+                      {face('me', 'me', 36, t('chat.you'))}
+                      <Box key={`wrap-field-${dept.id}`} width={0} flexGrow={1} minWidth={0} overflow="hidden">
+                        <Client
                           key={`field-${dept.id}`}
                           module="./field.tsx"
                           props={{ placeholder: dept.asleep ? t('field.asleep') : relayTo ? t('field.to', { name: relayTo.name, hint: '' }).trimEnd() : t('field.to', { name, hint: permWait(dept.id) ? t('field.afterPerm') : busy(dept.id) ? t('field.busy') : t('field.hint') }), mine: t('field.mine'), more: t('field.more'), bg: '#151514', ink: '#ecebe8', dim: '#8e8b85', line: '#3a3936', focus: '#b9c6d8', sel: '#3d4a5c', clear: sentCount, ...(pasted.has(dept.id) ? { insert: pasted.get(dept.id)! } : {}), cmds, ...tinted('field') }}
                           width="100%"
-                        />}
+                        />
                       </Box>
                       {/* Send centred on the field (two lines when its placeholder wraps): the strip's own Box sits at
                           flex-start, so its wrapper takes the row's alignment; flex-start while the slash menu is open. */}
                       <Box key={`send-${dept.id}`} flexShrink={0} alignSelf={menuOpen ? 'flex-start' : 'center'}>{btns(composeKey, compose)}</Box>
                     </Box>
+                    )}
                   </Box>
                 </Box>
               )
