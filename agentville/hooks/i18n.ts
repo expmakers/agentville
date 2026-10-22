@@ -127,6 +127,7 @@ export const STRINGS = {
   'zone.disk': ['Pantalla del disco', 'Disk screen', '디스크 화면'],
   // The office bureaucracy (scene.ts): a team row's floor label, the role tags over a team office's people by subagent
   // type, the secretaria, Producto's room and its goals board.
+  'team.head': ['Dirección', 'Head office', '총괄'], // a session that started others and names no team in its title
   'team.label': ['Equipo {letter} · {name}', 'Team {letter} · {name}', '팀 {letter} · {name}'],
   'tag.builder': ['Impl', 'Build', '빌더'],
   'tag.spec': ['Spec', 'Spec', '스펙'],

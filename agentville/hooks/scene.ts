@@ -1412,8 +1412,47 @@ export function zoneGrid(zones: Zone[]): ZoneBand[] {
 export const NAMES = ['Ana', 'Leo', 'Sofi', 'Tomás', 'Vale', 'Nico', 'Lucía', 'Mateo', 'Caro', 'Juanes', 'Isa', 'Pedro', 'Majo', 'Santi', 'Dani', 'Gabi']
 /** The names in Korean mode, one for one with NAMES: an agent keeps its place when the language changes. */
 export const NAMES_KO = ['지우', '서연', '민준', '하준', '서윤', '도윤', '하은', '시우', '지호', '수아', '예준', '유나', '준서', '다은', '현우', '소율']
+/** The name at place `i` in the language set: past the list, the name again with a number ("지우 2"). */
+export const nameAt = (i: number) => { const l = getLang() === 'ko' ? NAMES_KO : NAMES; return `${l[i % l.length]!}${i >= l.length ? ` ${Math.floor(i / l.length) + 1}` : ''}` }
+// Every pane's names come from one registry (names.json, assignNames): agent id -> place. An agent not in it yet (a
+// pane on an older mod, the moment before the first sync) has the place its id hashes to, as before the registry.
+const placeOf = new Map<string, number>()
+export const setNames = (reg: NameReg) => { placeOf.clear(); for (const [id, r] of Object.entries(reg)) placeOf.set(id, r.i) }
 /** An agent's name, fixed by its id: a session's chief and team keep theirs while the session lives. */
-export const agentName = (agentId: string) => (getLang() === 'ko' ? NAMES_KO : NAMES)[(hash(agentId) >>> 4) % NAMES.length]!
+export const agentName = (agentId: string) => nameAt(placeOf.get(agentId) ?? (hash(agentId) >>> 4) % NAMES.length)
+export type NameReg = Record<string, { i: number; at: number }>
+/** The registry after a sync: each live agent keeps its place; a new one takes the place its id hashes to (so names
+ * given before the registry stay), or the lowest place no live agent holds; `ids` in order of who picks first (namesOrder).
+ * Entries unseen for a week go. Pure: every pane that runs it on the same agents writes the same file. Returns null when
+ * nothing changed. */
+export function assignNames(reg: NameReg, ids: string[], now: number): NameReg | null {
+  const out: NameReg = {}, live = new Set(ids)
+  for (const [id, r] of Object.entries(reg)) if (live.has(id) || now - r.at < 7 * 86400000) out[id] = live.has(id) ? { i: r.i, at: now } : r
+  const held = new Set(ids.filter((id) => out[id]).map((id) => out[id]!.i)), fresh = ids.filter((id) => !out[id])
+  // First every new agent whose hashed place is free takes it, then the rest the lowest free ones: a clash never takes
+  // the place another new agent hashes to.
+  for (const id of fresh) { const i = (hash(id) >>> 4) % NAMES.length; if (!held.has(i)) { out[id] = { i, at: now }; held.add(i) } }
+  for (const id of fresh) { if (out[id]) continue; let i = 0; while (held.has(i)) i++; out[id] = { i, at: now }; held.add(i) }
+  const changed = Object.keys(out).length !== Object.keys(reg).length || Object.entries(out).some(([id, r]) => reg[id]?.i !== r.i)
+  return changed ? out : null
+}
+/** Who picks a name first when two want the same place: a session that started others (the head office), then each
+ * Lead before its team, then by id. */
+export const namesOrder = (w: AgentvilleWorld) => {
+  const head = (dept: string) => (w.depts.some((d) => d.from === dept || d.parent === dept) ? 0 : 1)
+  return [...w.agents].sort((a, b) => head(a.dept) - head(b.dept) || (a.role === 'jefe' ? 0 : 1) - (b.role === 'jefe' ? 0 : 1) || (a.id < b.id ? -1 : 1)).map((a) => a.id)
+}
+const leadTeam = (name: string) => /^(.+?)\s+(?:리드|Lead|Jefe)$/i.exec(name.replace(/ \d+$/, ''))?.[1] ?? null
+/** A session's team, from its title: "마케팅팀 리드" is 마케팅팀. Untitled so, a session started from another takes
+ * that one's team; any other is the head office (총괄) once some session names a team or it started others (where the
+ * app's records give no parent, as on Windows today, every session without a team), and has none otherwise. */
+export function deptTeam(d: AgentvilleDept, depts: AgentvilleDept[], depth = 0): string | null {
+  const own = leadTeam(d.name)
+  if (own) return own
+  const up = d.from ?? d.parent, parent = up ? depts.find((x) => x.id === up) : undefined
+  if (parent && depth < 3) return deptTeam(parent, depts, depth + 1)
+  return depts.some((x) => leadTeam(x.name) || x.from === d.id || x.parent === d.id) ? t('team.head') : null
+}
 /** The colour of each role's shirt (and yours): an agent's speech bubble wears it. */
 export const SHIRTS: Record<AgentvilleRole | 'me', string> = { jefe: OUTFITS.jefe.c!, impl: OUTFITS.impl.c!, rev: OUTFITS.rev.c!, qa: OUTFITS.qa.c!, me: '#4a4a44' }
 /**

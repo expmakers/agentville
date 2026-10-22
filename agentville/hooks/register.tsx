@@ -17,10 +17,10 @@ import type { Band, BandZone } from './bandhits'
 import type { TourRect, TourStep } from './scene'
 import { RELINK_EVERY, RELINK_FAST, RELINK_FRESH, RELINK_QUIET, RELINK_TRIES, SEP, chatUrl, ownLocal, parentLink, relinkGrep, relinkHits, sessionsFind, spawnedOf, diskColor, dueToMeasure, lockFree, parseDf, parseDu, parseRegistry, parseSessions, rankWorktrees, RECORD_MAX, recordOf } from './disk'
 import type { Worktree } from './disk'
-import type { Detail, DiskView, Zone } from './scene'
+import type { Detail, DiskView, NameReg, Zone } from './scene'
 import { SYNC_EVERY, diskRootOf, isMod, syncKey, versionOf } from './sync'
 import type { Disk } from './sync'
-import { CLOSE_W, PROD_KIND, kindOf, around, closeGlyphAt, padded, within, cardCloseGlyph, cardPart, cardRect, notesTop, DISK_INK, diskTop, TOUR_STEP_IDS, tourSteps, tourTargets, cardOver, ctxColor, hqTop, isLive, officeTop, mapStrip, toolsLabel, toolsOf, usd, roleName, ROLE_ORDER, SHIRTS, STATES, agentName, chipSvg, faceSvg, tabsSvg, floorView, floorsOf, viewOf, zoneGrid, GRID_MAX, agentsLayer, selectionLayer, vectorPeople, svgUse, emptyWorld, furnitureLayer, hotspots, houseLayer, worldFromBeats, drawnSig, EDGE_EPS } from './scene'
+import { CLOSE_W, PROD_KIND, kindOf, around, closeGlyphAt, padded, within, cardCloseGlyph, cardPart, cardRect, notesTop, DISK_INK, diskTop, TOUR_STEP_IDS, tourSteps, tourTargets, cardOver, ctxColor, hqTop, isLive, officeTop, mapStrip, toolsLabel, toolsOf, usd, roleName, ROLE_ORDER, SHIRTS, STATES, agentName, assignNames, namesOrder, setNames, deptTeam, chipSvg, faceSvg, tabsSvg, floorView, floorsOf, viewOf, zoneGrid, GRID_MAX, agentsLayer, selectionLayer, vectorPeople, svgUse, emptyWorld, furnitureLayer, hotspots, houseLayer, worldFromBeats, drawnSig, EDGE_EPS } from './scene'
 import {
   keyOf, ACK_WAIT, OFFERS_DONE, marksOf, OFFER_ACKS, ACK_KEEP, ACK_RS, ARCHIVE_TOOL, CONSENT, hasItem, waitPatch,
   unwait, dropOffers, INTRO, HIDDEN_KEY, MAILBOX_KEY, isReload, withImages, EVERYWHERE, PERSON_ONLY, FLOW_KEY,
@@ -502,6 +502,11 @@ async function sync($: EngineInterface, reads = false) {
   }))
   const prev = usable(await read($, world))
   const next = worldFromBeats(prev, beats, now, await hiddenOf($))
+  // Names: one registry for every pane, so no two agents on the map share one (assignNames).
+  const namesFile = `${await home($)}/.claude/agentville/names.json`, reg = (await readJson<NameReg>($, namesFile).catch(() => null)) ?? {}
+  const named = assignNames(reg, namesOrder(next), now)
+  if (named) await $.fs.write(namesFile, JSON.stringify(named)).catch(() => {})
+  setNames(named ?? reg)
   const arrived = next.agents.find(a => a.state === 'esperando' && prev?.agents.find(o => o.id === a.id)?.state !== 'esperando')
   // Nothing drawn changed (drawnSig): no update, so no redraw; the world on hand keeps its walks and places.
   // The ticker's passes (`reads`) redraw through the gate; a sync you caused (opening, refresh, sync), someone who starts
@@ -1873,6 +1878,8 @@ export function register(on: On, options: PluginOptions) {
     const older = (d: AgentvilleDept) => !!diskVer && d.mod !== diskVer
     const behind = (d: AgentvilleDept) => older(d) && !dozing(d), waking = (d: AgentvilleDept) => older(d) && dozing(d)
     const deptName = (id: string) => deptById(id)?.name ?? id
+    // An agent's name and its session's team (deptTeam), as the list and the card say it: "지호 · 마케팅팀".
+    const named = (id: string, d?: AgentvilleDept) => { const team = d ? deptTeam(d, w.depts) : null; return team ? `${agentName(id)} · ${team}` : agentName(id) }
     const headline = queue.length === 0 ? t('head.none') : queue.length === 1 ? t('head.one') : t('head.many', { n: queue.length })
 
     if (e.surface !== 'desktop') {
@@ -2148,7 +2155,7 @@ export function register(on: On, options: PluginOptions) {
       const word = waking(d) ? t('sync.asleepRow') : d.asleep ? t('list.asleep') : d.idle ? t('list.quiet') : (sugg ? t('state.sugiere') : STATES[stt].label).toLowerCase(), open = planOpen(d), dup = open.startsWith(` · ${word}`)
       return {
         label: `${under ? '↳ ' : ''}${short(d.name, 30)}`,
-        desc: `${c ? agentName(c.id) + ' · ' : ''}${d.parent && !under && parentName ? `${t(waitsIn(d).length ? 'list.of' : 'role.leadOf', { parent: short(parentName, 24) })} · ` : ''}${[dup ? '' : word, behind(d) ? t(d.syncStuck ? 'list.stuck' : 'list.older') : '', coord(d).slice(3), open.slice(3)].filter(Boolean).join(' · ')}${nearlyFull(d) ? ` · ${fill(d.usage!.pct)}` : ''} · ${short(waitsIn(d)[0]?.cmd ?? c?.activity ?? '', 40)}${costOf(d, !nearlyFull(d))}`,
+        desc: `${c ? named(c.id, d) + ' · ' : ''}${d.parent && !under && parentName ? `${t(waitsIn(d).length ? 'list.of' : 'role.leadOf', { parent: short(parentName, 24) })} · ` : ''}${[dup ? '' : word, behind(d) ? t(d.syncStuck ? 'list.stuck' : 'list.older') : '', coord(d).slice(3), open.slice(3)].filter(Boolean).join(' · ')}${nearlyFull(d) ? ` · ${fill(d.usage!.pct)}` : ''} · ${short(waitsIn(d)[0]?.cmd ?? c?.activity ?? '', 40)}${costOf(d, !nearlyFull(d))}`,
       }
     }
     // Each shown thumbnail is read once; the Svg wraps the jpeg (the desktop draws no Image element).
@@ -3058,7 +3065,7 @@ export function register(on: On, options: PluginOptions) {
                       })()}
                       <Box flexDirection="column" flexShrink={1}>
                         {tx(dept.name, { heavy: true })}
-                        {tx(`${who ? agentName(who.id) : name}, ${roleName(who?.role ?? 'jefe', dept)} · ${short(who?.activity ?? '', 60)}${costOf(dept)}`, { dim: true, size: 'footnote' })}
+                        {tx(`${who ? named(who.id, dept) : name}, ${roleName(who?.role ?? 'jefe', dept)} · ${short(who?.activity ?? '', 60)}${costOf(dept)}`, { dim: true, size: 'footnote' })}
                       </Box>
                     </Box>
                     <Box flexDirection="row" gap="xs" alignItems="center">

@@ -2,7 +2,8 @@ import { expect, test } from 'claude-code/testing'
 
 import { DEFAULT_LANG, LANG_KEY, STRINGS, getLang, langOf, setLang, t } from '../hooks/i18n'
 import type { Key } from '../hooks/i18n'
-import { NAMES, NAMES_KO, ROLES, STATES, agentName, mapNote, toolsLabel } from '../hooks/scene'
+import { NAMES, NAMES_KO, ROLES, STATES, agentName, assignNames, deptTeam, mapNote, setNames, toolsLabel } from '../hooks/scene'
+import type { AgentvilleDept } from '../types'
 import { RELAY_RULE, relayOf } from '../hooks/pure'
 import { PALETTES } from '../hooks/look'
 import { newBeat } from '../hooks/beat'
@@ -121,4 +122,32 @@ test('Korean names: only in ko, the same place as the Spanish name, and a marker
   for (const [name, lang] of [['지우', 'ko'], ['Ana', 'ko'], ['지우', 'es']] as const) {
     expect(relayOf(t('relay.marker', { name, type: 'agentville:builder', id: 'ag1', text: '봐' }, lang))).toEqual({ name, id: 'ag1', text: '봐' })
   }
+})
+
+test('unique names: a live agent keeps its place, a new one takes its hashed place or the lowest free one, past 16 a number', () => {
+  const place = (id: string) => { setNames({}); return NAMES.indexOf(agentName(id)) } // es, no registry: the hashed place
+  const ids = Array.from({ length: 200 }, (_, i) => `s${i}-jefe`), a = ids[0]!, b = ids.find(id => id !== a && place(id) === place(a))!
+  const reg = assignNames({}, [a, b].sort(), 0)!
+  expect([reg[a]!.i, reg[b]!.i]).toEqual(a < b ? [place(a), 0 === place(a) ? 1 : 0] : [place(b) === 0 ? 1 : 0, place(b)])
+  expect(assignNames(reg, [a, b], 1000)).toBe(null) // nothing new: nothing written
+  const later = assignNames(reg, [b], 8 * 86400000)! // a gone for over a week: its entry goes, b keeps its place
+  expect([a in later, later[b]!.i]).toEqual([false, reg[b]!.i])
+  const many = assignNames({}, ids.slice(0, 20), 0)!
+  expect(new Set(Object.values(many).map(r => r.i)).size).toBe(20)
+  setNames(many)
+  const names = ids.slice(0, 20).map(id => agentName(id))
+  expect(new Set(names).size).toBe(20)
+  expect(names.some(n => / 2$/.test(n))).toBe(true)
+  inLang('ko', () => expect(new Set(ids.slice(0, 20).map(id => agentName(id))).size).toBe(20))
+  expect(relayOf(t('relay.marker', { name: '지우 2', type: 'x', id: 'ag1', text: '봐' }, 'ko'))).toEqual({ name: '지우 2', id: 'ag1', text: '봐' })
+  setNames({})
+})
+
+test('teams: from the title without 리드, a started session takes its parent\'s, any other is the head office once a team exists', () => {
+  const d = (id: string, name: string, more: Partial<AgentvilleDept> = {}) => ({ id, name, task: '', color: '', room: [], notes: [], ...more }) as AgentvilleDept
+  const main = d('m', 'EXP_APP'), mkt = d('a', '마케팅팀 리드', { parent: 'm', from: 'm' }), kid = d('k', '랜딩 페이지 문구', { parent: 'm', from: 'a' }), lone = d('l', 'misc')
+  const all = [main, mkt, kid, lone]
+  inLang('ko', () => expect([deptTeam(mkt, all), deptTeam(kid, all), deptTeam(main, all), deptTeam(lone, all)]).toEqual(['마케팅팀', '마케팅팀', '총괄', '총괄']))
+  expect([deptTeam(lone, [lone]), deptTeam(main, [main, d('s', 'sub', { parent: 'm', from: 'm' })])]).toEqual([null, 'Dirección'])
+  expect(deptTeam(d('x', 'HW팀 리드 2'), [])).toBe('HW팀')
 })
