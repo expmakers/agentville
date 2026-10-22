@@ -33,7 +33,8 @@ export type AgentvilleReply = { label: string; text: string; app?: true; action?
 export type AgentvilleAsk = { id: string; q: string; replies: AgentvilleReply[]; blocked?: true }
 /** A session the Jefe suggested (start_session), by the task id the app gave it: started or dismissed from the pane. */
 export type AgentvilleOffer = { id: string; title: string; brief: string }
-export type AgentvilleDept = { id: string; name: string; task: string; color: string; room: number[]; floor?: number; slot?: number; away?: true; notes: AgentvilleNote[]; steps?: AgentvilleStep[]; bg?: AgentvilleBgTask[]; chat?: AgentvilleChat[]; asleep?: true; idle?: true; openSteps?: number; parent?: string; from?: string; local?: string; fam?: { rooms: number; more: number }; usage?: AgentvilleUsage; tools?: Record<string, number>; ask?: AgentvilleAsk; offers?: AgentvilleOffer[]; mod?: string; syncStuck?: string; desks?: AgentvilleDesk[]; teams?: AgentvilleTeam[]; metas?: string[] }
+// lead: the session's title named it a team's lead ("마케팅팀 리드"), its name the team (마케팅팀).
+export type AgentvilleDept = { id: string; name: string; lead?: true; task: string; color: string; room: number[]; floor?: number; slot?: number; away?: true; notes: AgentvilleNote[]; steps?: AgentvilleStep[]; bg?: AgentvilleBgTask[]; chat?: AgentvilleChat[]; asleep?: true; idle?: true; openSteps?: number; parent?: string; from?: string; local?: string; fam?: { rooms: number; more: number }; usage?: AgentvilleUsage; tools?: Record<string, number>; ask?: AgentvilleAsk; offers?: AgentvilleOffer[]; mod?: string; syncStuck?: string; desks?: AgentvilleDesk[]; teams?: AgentvilleTeam[]; metas?: string[] }
 export type AgentvilleDesk = { id: string; x: number; y: number }
 export type AgentvilleTeam = { letter: string; name: string; row: number; more: number }
 /** A timed place to stand (delivering to the Jefe, seeing the secretaria, at Producto's door) until `until`. The

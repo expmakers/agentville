@@ -12,7 +12,9 @@ export type BeatAgent = { role: AgentvilleRole; kind: string; state: AgentvilleS
 // parent: the CLI session id of the session that started this one (its office sits in the parent's block).
 // local: this session's own record id in the Claude app (`local_<uuid>`), from its record: its chat's link.
 // archived: set only by the pane, from the app's record (`isArchived`), never written to a heartbeat: the chat leaves.
-export type Beat = { id: string; name: string; at: number; ended: boolean; agents: Record<string, BeatAgent>; notes: AgentvilleNote[]; steps?: AgentvilleStep[]; bg?: AgentvilleBgTask[]; chat?: AgentvilleChat[]; slot?: number; endReason?: string; usage?: AgentvilleUsage; tools?: Record<string, number>; openSteps?: number; parent?: string; local?: string; ask?: BeatAsk; offers?: BeatOffer[]; mod?: string; syncStuck?: string; metas?: string[]; archived?: true }
+// title: the app's own title for the session (its classic events' session_title); alias: a name the person gave it
+// (/agentville name), which wins. `name` is what an older mod wrote: the transcript's title or the folder.
+export type Beat = { id: string; name: string; title?: string; alias?: string; at: number; ended: boolean; agents: Record<string, BeatAgent>; notes: AgentvilleNote[]; steps?: AgentvilleStep[]; bg?: AgentvilleBgTask[]; chat?: AgentvilleChat[]; slot?: number; endReason?: string; usage?: AgentvilleUsage; tools?: Record<string, number>; openSteps?: number; parent?: string; local?: string; ask?: BeatAsk; offers?: BeatOffer[]; mod?: string; syncStuck?: string; metas?: string[]; archived?: true }
 /** A chat picture as heartbeats keep it, `{ file, w, h, orig }` in every version. The .tsx files never name `h` (the
  * plugin directory reads it as the JSX factory's), so they read and make one only through picHt and chatPic. */
 export type ChatPic = NonNullable<AgentvilleChat['pics']>[number]
@@ -124,13 +126,17 @@ export function asCommand(text: string, names: string[]): { command: string; arg
 export function titleFrom(tail: string): string | null {
   const m = [...tail.matchAll(/"customTitle":"((?:[^"\\]|\\.)*)"/g)].at(-1)?.[1]
   if (!m) return null
-  // As pasteText: a zero-width joiner stays (emoji sequences), and the cut never splits a character. Joiners alone
-  // show nothing: no title.
-  try {
-    const s = Array.from((JSON.parse(`"${m}"`) as string).replace(/\p{Cc}|(?!\u200d)\p{Cf}/gu, '')).slice(0, 120).join('').trim()
-    return s.replace(/\u200d/g, '').trim() ? s : null
-  } catch { return null }
+  try { return cleanTitle(JSON.parse(`"${m}"`) as string) } catch { return null }
 }
+/** A title as a heartbeat keeps it. As pasteText: a zero-width joiner stays (emoji sequences), and the cut never splits
+ * a character. Joiners alone show nothing: no title. */
+export function cleanTitle(t: unknown): string | null {
+  if (typeof t !== 'string') return null
+  const s = Array.from(t.replace(/\p{Cc}|(?!\u200d)\p{Cf}/gu, '')).slice(0, 120).join('').trim()
+  return s.replace(/\u200d/g, '').trim() ? s : null
+}
+/** A folder's own name, the last part of a path with either separator (C:\\Users\\me\\app or /home/me/app). */
+export const folderName = (p: string) => p.split(/[\\/]/).filter(Boolean).pop() ?? p
 
 export const newBeat = (id: string, name: string, now: number): Beat => ({
   id, name, at: now, ended: false, notes: [],
@@ -322,7 +328,7 @@ export function chatFrom(m: Msg): AgentvilleChat | null {
 /** A reload starts the module over: the session keeps what its last heartbeat said (chat, plan, steps, background, island, parent, record id). */
 export function carryOver(b: Beat, old: Beat | null) {
   if (old?.id !== b.id) return
-  for (const k of ['chat', 'notes', 'steps', 'bg', 'slot', 'usage', 'tools', 'openSteps', 'parent', 'local', 'ask', 'offers', 'metas'] as const) if (old[k]) (b as Record<string, unknown>)[k] = old[k]
+  for (const k of ['chat', 'notes', 'steps', 'bg', 'slot', 'usage', 'tools', 'openSteps', 'parent', 'local', 'ask', 'offers', 'metas', 'title', 'alias'] as const) if (old[k]) (b as Record<string, unknown>)[k] = old[k]
 }
 // A sleeper stays SLEEP_MS after its last word; a message wakes it on its own island. An archived chat leaves at once
 // (the pane reads the app's `isArchived`, see lookArchived in register.tsx).

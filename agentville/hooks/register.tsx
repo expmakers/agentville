@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, PluginOptions, UiCopyArgs, UiMessageArgument } from 'claude-code'
 import type { AgentvilleChat, AgentvilleDept, AgentvilleReply, AgentvilleUsage, AgentvilleWorld } from '../types'
-import { CMD_MAX, DISMISS, cmdTitle, isHiddenCmd, isImg, isToolCall, MAIN, METAS_MAX, SLEEP_MS, asksFrom, pressTitle, closedOk, closingsFrom, fillTextOf, isIdle, addSaid, addStep, asCommand, guardedCommand, guardedPath, HOLD_MS, isCutCmd, isMaskedCmd, trusted, TASK, offerOrderOk, beatsDir, carryOver, chatOfTranscript, claimSlot, imagesOf, bgFrom, chatFrom, commandsFile, controlFile, doing, endStep, isTaskList, metasOf, newBeat, notesFrom, openOf, pending, pushChat, roleOf, setAgent, titleFrom, viewerFile, OFFER_TTL, REFUSED, asksOfTranscript, asPrompt, signOf, chatPic, picHt } from './beat'
+import { CMD_MAX, DISMISS, cmdTitle, isHiddenCmd, isImg, isToolCall, MAIN, METAS_MAX, SLEEP_MS, asksFrom, pressTitle, closedOk, closingsFrom, fillTextOf, isIdle, addSaid, addStep, asCommand, guardedCommand, guardedPath, HOLD_MS, isCutCmd, isMaskedCmd, trusted, TASK, offerOrderOk, beatsDir, carryOver, chatOfTranscript, claimSlot, imagesOf, bgFrom, chatFrom, commandsFile, controlFile, doing, endStep, isTaskList, metasOf, newBeat, notesFrom, openOf, pending, pushChat, roleOf, setAgent, titleFrom, cleanTitle, folderName, viewerFile, OFFER_TTL, REFUSED, asksOfTranscript, asPrompt, signOf, chatPic, picHt } from './beat'
 import type { Beat, ChatPic, Cmd, CmdRow, ImgRef, Closing } from './beat'
 import { blocksOf, foldBlocks } from './rich'
 import type { Block, Run } from './rich'
@@ -572,7 +572,7 @@ async function startBeat($: EngineInterface) {
   loadedVer ??= await versionAt($, $.plugin.root) // what this module loaded, before the disk moves on
   await useLang($)
   const cwd = await $.session.cwd(), now = await $.clock.now()
-  const b = newBeat(await $.session.id(), cwd.split('/').filter(Boolean).pop() ?? t('act.session'), now)
+  const b = newBeat(await $.session.id(), folderName(cwd) || t('act.session'), now)
   if (loadedVer) b.mod = loadedVer
   // Where the app keeps the transcript; the classic events below say it too, but a session started from another
   // session may never get them.
@@ -833,6 +833,13 @@ async function retitle($: EngineInterface) {
   if (!transcript) return
   const t = titleFrom(await tailOf($, transcript))
   if (t && t !== beat?.name) await mark($, b => { b.name = t })
+}
+// The app's title for this session, as its classic events give it (session_title): no transcript read, so it works
+// where reading the transcript's tail does not (Windows has no /usr/bin/tail).
+async function titled($: EngineInterface, raw: unknown) {
+  if (!beat) await ensureBeat($).catch(() => {})
+  const title = cleanTitle(raw)
+  if (title && title !== beat?.title) await mark($, b => { b.title = title })
 }
 
 // The session that started this one, read from the app's session records while unknown: every RELINK_FAST in the
@@ -1565,12 +1572,14 @@ export function register(on: On, options: PluginOptions) {
   // Classic events carry the transcript's path; the title is read from it.
   on('classic.SessionStart', async ($, e, next) => {
     transcript = e.transcript_path
+    void titled($, e.session_title).catch(() => {})
     void retitle($).catch(() => {})
 
     return next(e)
   }).catch(($, e, next) => next(e))
   on('classic.UserPromptSubmit', async ($, e, next) => {
     transcript = e.transcript_path
+    void titled($, e.session_title).catch(() => {})
     void retitle($).catch(() => {})
     void relink($).catch(() => {})
 
@@ -1712,6 +1721,17 @@ export function register(on: On, options: PluginOptions) {
     const syncArgs = /^\s*(?:sync|sincronizar)\b(.*)$/i.exec(e.args ?? '')
     if (syncArgs) { await useLang($); return { text: (['composer', 'bridge'] as string[]).includes(e.origin?.kind ?? '') ? await syncCmd($, syncArgs[1]!) : t('cmd.sync.typed') } }
     // `/agentville refresh` (or limpiar) tidies the map and answers in text; it opens no pane.
+    // `/agentville name <name>` (or nombre, 이름): this session's office is called so on every map; with no name, the app's
+    // title again.
+    const naming = /^\s*(?:name|nombre|이름)(?:\s+(.*))?$/i.exec(e.args ?? '')
+    if (naming) {
+      await useLang($)
+      if (!beat) await ensureBeat($).catch(() => {})
+      const alias = cleanTitle(naming[1] ?? '')?.slice(0, 40) ?? null
+      await mark($, b => { if (alias) b.alias = alias; else delete b.alias })
+      await sync($).catch(() => {})
+      return { text: alias ? t('cmd.named', { name: alias }) : t('cmd.unnamed') }
+    }
     if (/^\s*(refresh|limpiar)\b/i.test(e.args ?? '')) { await useLang($); return { text: await refresh($) } }
     // `/agentville lite` (or ligero, sin mapa) is the way back from a pane that does not draw: it opens without the map.
     if (/\b(ligero|sin mapa|lite)\b/i.test(e.args ?? '')) await $.store.set(NO_MAP, true) // whole words: "elite" is not "lite"

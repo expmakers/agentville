@@ -2,7 +2,8 @@ import { expect, test } from 'claude-code/testing'
 
 import { DEFAULT_LANG, LANG_KEY, STRINGS, getLang, langOf, setLang, t } from '../hooks/i18n'
 import type { Key } from '../hooks/i18n'
-import { NAMES, NAMES_KO, ROLES, STATES, agentName, assignNames, deptTeam, mapNote, setNames, toolsLabel } from '../hooks/scene'
+import { NAMES, NAMES_KO, ROLES, STATES, agentName, assignNames, deptTeam, mapNote, officeName, setNames, toolsLabel } from '../hooks/scene'
+import { cleanTitle, folderName } from '../hooks/beat'
 import type { AgentvilleDept } from '../types'
 import { RELAY_RULE, relayOf } from '../hooks/pure'
 import { PALETTES } from '../hooks/look'
@@ -150,4 +151,15 @@ test('teams: from the title without 리드, a started session takes its parent\'
   inLang('ko', () => expect([deptTeam(mkt, all), deptTeam(kid, all), deptTeam(main, all), deptTeam(lone, all)]).toEqual(['마케팅팀', '마케팅팀', '총괄', '총괄']))
   expect([deptTeam(lone, [lone]), deptTeam(main, [main, d('s', 'sub', { parent: 'm', from: 'm' })])]).toEqual([null, 'Dirección'])
   expect(deptTeam(d('x', 'HW팀 리드 2'), [])).toBe('HW팀')
+})
+
+test('office names: the name given, else the app title (a lead\'s without 리드), else a folder\'s own name on any system', () => {
+  expect(officeName({ name: 'C:\\Users\\me\\Desktop\\EXP_APP' })).toEqual({ name: 'EXP_APP' })
+  expect(officeName({ name: '/home/me/app' })).toEqual({ name: 'app' })
+  expect(officeName({ name: 'EXP_APP', title: '마케팅팀 리드' })).toEqual({ name: '마케팅팀', lead: true })
+  expect(officeName({ name: 'EXP_APP', title: '이전에 하던작업 진행상황 알려줘', alias: '총괄' })).toEqual({ name: '총괄' })
+  expect([cleanTitle('  a\u0007b  '), cleanTitle(''), cleanTitle(3), folderName('C:\\x\\y')]).toEqual(['ab', null, null, 'y'])
+  const d = (id: string, name: string, more: Partial<AgentvilleDept> = {}) => ({ id, name, task: '', color: '', room: [], notes: [], ...more }) as AgentvilleDept
+  const all = [d('a', '마케팅팀', { lead: true }), d('b', '분석 및 QA팀 2', { lead: true }), d('m', '총괄')]
+  inLang('ko', () => expect(all.map(x => deptTeam(x, all))).toEqual(['마케팅팀', '분석 및 QA팀', '총괄']))
 })

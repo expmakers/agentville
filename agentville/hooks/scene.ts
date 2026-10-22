@@ -1,5 +1,5 @@
 import type { AgentvilleAgent, AgentvilleAsk, AgentvilleDept, AgentvilleFacing, AgentvilleOffer, AgentvillePosture, AgentvilleRole, AgentvilleStaff, AgentvilleStateName, AgentvilleVisit, AgentvilleWorld } from '../types'
-import { APP_ACTIONS, HIDDEN, MAIN, OFFER_TTL, SLEEP_MS, canSend, isIdle } from './beat'
+import { APP_ACTIONS, HIDDEN, MAIN, OFFER_TTL, SLEEP_MS, canSend, folderName, isIdle } from './beat'
 import type { Beat, BeatAgent } from './beat'
 import { chatUrl, diskColor } from './disk'
 import { isMod } from './sync'
@@ -586,10 +586,10 @@ export function worldFromBeats(prev: AgentvilleWorld | null, beats: Beat[], now:
   ;[...live].sort((x, y) => away(x) - away(y)).forEach((b) => { if (place.has(b.id)) return; while (taken.has(next)) next++; place.set(b.id, next); taken.add(next) })
   const seen = new Map<string, number>()
   const depts: AgentvilleDept[] = [...live].sort((x, y) => place.get(x.id)! - place.get(y.id)!).map((b) => {
-    const g = place.get(b.id)!, slot = g % PER_FLOOR, k = (seen.get(b.name) ?? 0) + 1, ask = askOfBeat(b.ask), offers = offersOfBeat(b.offers, now)
-    seen.set(b.name, k)
+    const g = place.get(b.id)!, slot = g % PER_FLOOR, nm = officeName(b), k = (seen.get(nm.name) ?? 0) + 1, ask = askOfBeat(b.ask), offers = offersOfBeat(b.offers, now)
+    seen.set(nm.name, k)
     return {
-      id: b.id, name: k > 1 ? `${b.name} ${k}` : b.name, task: b.agents[MAIN]?.activity ?? '', color: COLORS[g % COLORS.length]!, room: [],
+      id: b.id, name: k > 1 ? `${nm.name} ${k}` : nm.name, ...(nm.lead ? { lead: true as const } : {}), task: b.agents[MAIN]?.activity ?? '', color: COLORS[g % COLORS.length]!, room: [],
       floor: Math.floor(g / PER_FLOOR), slot, notes: b.notes, steps: b.steps ?? [], bg: (b.bg ?? []).slice(-5), chat: b.chat ?? [], usage: b.usage, tools: b.tools,
       ...(b.ended ? { asleep: true as const } : isIdle(b, now, hidden) ? { idle: true as const } : {}), ...(b.openSteps ? { openSteps: b.openSteps } : {}),
       ...(ask ? { ask } : {}), ...(offers.length ? { offers } : {}),
@@ -1443,15 +1443,22 @@ export const namesOrder = (w: AgentvilleWorld) => {
   return [...w.agents].sort((a, b) => head(a.dept) - head(b.dept) || (a.role === 'jefe' ? 0 : 1) - (b.role === 'jefe' ? 0 : 1) || (a.id < b.id ? -1 : 1)).map((a) => a.id)
 }
 const leadTeam = (name: string) => /^(.+?)\s+(?:리드|Lead|Jefe)$/i.exec(name.replace(/ \d+$/, ''))?.[1] ?? null
+/** An office's name: the name the person gave it, else the app's title (a team lead's without " 리드"), else what an
+ * older mod wrote (a title, or a folder, shown by its own name). */
+export function officeName(b: Pick<Beat, 'name' | 'title' | 'alias'>): { name: string; lead?: true } {
+  if (b.alias) return { name: b.alias }
+  const raw = b.title ?? (/^(?:[A-Za-z]:)?[\\/]/.test(b.name) ? folderName(b.name) : b.name), team = leadTeam(raw)
+  return team ? { name: team, lead: true } : { name: raw }
+}
 /** A session's team, from its title: "마케팅팀 리드" is 마케팅팀. Untitled so, a session started from another takes
  * that one's team; any other is the head office (총괄) once some session names a team or it started others (where the
  * app's records give no parent, as on Windows today, every session without a team), and has none otherwise. */
 export function deptTeam(d: AgentvilleDept, depts: AgentvilleDept[], depth = 0): string | null {
-  const own = leadTeam(d.name)
+  const own = d.lead ? d.name.replace(/ \d+$/, '') : leadTeam(d.name)
   if (own) return own
   const up = d.from ?? d.parent, parent = up ? depts.find((x) => x.id === up) : undefined
   if (parent && depth < 3) return deptTeam(parent, depts, depth + 1)
-  return depts.some((x) => leadTeam(x.name) || x.from === d.id || x.parent === d.id) ? t('team.head') : null
+  return depts.some((x) => x.lead || leadTeam(x.name) || x.from === d.id || x.parent === d.id) ? t('team.head') : null
 }
 /** The colour of each role's shirt (and yours): an agent's speech bubble wears it. */
 export const SHIRTS: Record<AgentvilleRole | 'me', string> = { jefe: OUTFITS.jefe.c!, impl: OUTFITS.impl.c!, rev: OUTFITS.rev.c!, qa: OUTFITS.qa.c!, me: '#4a4a44' }
