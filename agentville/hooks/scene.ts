@@ -3,7 +3,7 @@ import { APP_ACTIONS, HIDDEN, MAIN, OFFER_TTL, SLEEP_MS, canSend, isIdle } from 
 import type { Beat, BeatAgent } from './beat'
 import { chatUrl, diskColor } from './disk'
 import { isMod } from './sync'
-import { live, t } from './i18n'
+import { getLang, live, t } from './i18n'
 import { esc, textW } from './chrome' // esc drops control characters too: session titles and notes are untrusted
 import { spritePng } from './png'
 import { NO_LIGATURES } from './pixfont'
@@ -1410,8 +1410,10 @@ export function zoneGrid(zones: Zone[]): ZoneBand[] {
 
 /* ---------- faces and names, for the pane ---------- */
 export const NAMES = ['Ana', 'Leo', 'Sofi', 'Tomás', 'Vale', 'Nico', 'Lucía', 'Mateo', 'Caro', 'Juanes', 'Isa', 'Pedro', 'Majo', 'Santi', 'Dani', 'Gabi']
+/** The names in Korean mode, one for one with NAMES: an agent keeps its place when the language changes. */
+export const NAMES_KO = ['지우', '서연', '민준', '하준', '서윤', '도윤', '하은', '시우', '지호', '수아', '예준', '유나', '준서', '다은', '현우', '소율']
 /** An agent's name, fixed by its id: a session's chief and team keep theirs while the session lives. */
-export const agentName = (agentId: string) => NAMES[(hash(agentId) >>> 4) % NAMES.length]!
+export const agentName = (agentId: string) => (getLang() === 'ko' ? NAMES_KO : NAMES)[(hash(agentId) >>> 4) % NAMES.length]!
 /** The colour of each role's shirt (and yours): an agent's speech bubble wears it. */
 export const SHIRTS: Record<AgentvilleRole | 'me', string> = { jefe: OUTFITS.jefe.c!, impl: OUTFITS.impl.c!, rev: OUTFITS.rev.c!, qa: OUTFITS.qa.c!, me: '#4a4a44' }
 /**

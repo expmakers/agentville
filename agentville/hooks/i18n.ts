@@ -85,7 +85,7 @@ export const STRINGS = {
   'tour.done.title': ['¡Listo!', 'All set!', '준비 끝!'],
   'tour.done.say': ['Ya conoces la oficina. Vuelve a este recorrido cuando quieras con el botón Recorrido.', 'You know the office now. Replay this tour any time with the Tour button.', '이제 사무실을 다 알았어요. 둘러보기 버튼으로 언제든 다시 볼 수 있어요.'],
   'tour.banner.waits': ['Te espera 1', '1 waiting', '1명 대기 중'],
-  'tour.banner.text': ['Lía (App de recetas): npm run test -- recipes', 'Lía (Recipes app): npm run test -- recipes', 'Lía (레시피 앱): npm run test -- recipes'],
+  'tour.banner.text': ['Lía (App de recetas): npm run test -- recipes', 'Lía (Recipes app): npm run test -- recipes', '지우 (레시피 앱): npm run test -- recipes'],
 
   // Roles, states and the map (scene.ts)
   'role.jefe': ['Jefe', 'Lead', '리드'],

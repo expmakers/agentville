@@ -2,7 +2,7 @@ import { expect, test } from 'claude-code/testing'
 
 import { DEFAULT_LANG, LANG_KEY, STRINGS, getLang, langOf, setLang, t } from '../hooks/i18n'
 import type { Key } from '../hooks/i18n'
-import { NAMES, ROLES, STATES, mapNote, toolsLabel } from '../hooks/scene'
+import { NAMES, NAMES_KO, ROLES, STATES, agentName, mapNote, toolsLabel } from '../hooks/scene'
 import { RELAY_RULE, relayOf } from '../hooks/pure'
 import { PALETTES } from '../hooks/look'
 import { newBeat } from '../hooks/beat'
@@ -110,4 +110,15 @@ test('Korean: t picks the third text, the pure tables follow it, and a Korean re
   expect(relayOf(row)).toEqual({ name: NAMES[0], id: 'ag1', text: '여기 **봐**' })
   expect(relayOf(` ${row}`)).toBe(null)
   expect(RELAY_RULE.includes('"<name>에게 (서브에이전트 <type>, id <id>):"')).toBe(true)
+})
+
+test('Korean names: only in ko, the same place as the Spanish name, and a marker with either name reads back', () => {
+  const ids = Array.from({ length: 40 }, (_, i) => `s${i}-jefe`)
+  const es = ids.map(id => agentName(id)), ko = (() => { let r: string[] = []; inLang('ko', () => { r = ids.map(id => agentName(id)) }); return r })()
+  expect(ids.every((_, i) => NAMES_KO[NAMES.indexOf(es[i]!)] === ko[i])).toBe(true)
+  inLang('en', () => expect(ids.map(id => agentName(id))).toEqual(es))
+  expect(NAMES_KO.length).toBe(NAMES.length)
+  for (const [name, lang] of [['지우', 'ko'], ['Ana', 'ko'], ['지우', 'es']] as const) {
+    expect(relayOf(t('relay.marker', { name, type: 'agentville:builder', id: 'ag1', text: '봐' }, lang))).toEqual({ name, id: 'ag1', text: '봐' })
+  }
 })

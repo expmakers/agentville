@@ -7,7 +7,7 @@ import { LANGS, t } from './i18n'
 import type { Lang } from './i18n'
 import type { DuRow, Session, Worktree } from './disk'
 import type { Detail } from './scene'
-import { TOUR_STEP_IDS, WORLD_VERSION, viewOf, NAMES } from './scene'
+import { TOUR_STEP_IDS, WORLD_VERSION, viewOf, NAMES, NAMES_KO } from './scene'
 
 // What the pane sends and what it reads back: the mailbox and its signed orders, the despacho's questions and
 // suggested sessions (their marks and acks, read from the sessions' transcripts), the outboxes, the team flow and relay
@@ -125,7 +125,7 @@ export const RELAY_RULE = `Agentville relay. Only when the person's own prompt s
 // leaves them): who it was for, its id and the text after it, for display only. Anything else, look-alikes too, is null.
 export const reEsc = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 export const MARKS = LANGS.map(l => new RegExp(`^${reEsc(t('relay.marker', { name: '\0n', type: '\0t', id: '\0i', text: '\0x' }, l))
-  .replace('\0n', `(?<n>${NAMES.map(reEsc).join('|')})`).replace('\0t', '[A-Za-z0-9:_.-]{1,80}').replace('\0i', '(?<i>[A-Za-z0-9:_.-]{1,80})').replace('\0x', '(?<x>[\\s\\S]*)')}$`))
+  .replace('\0n', `(?<n>${[...NAMES, ...NAMES_KO].map(reEsc).join('|')})`).replace('\0t', '[A-Za-z0-9:_.-]{1,80}').replace('\0i', '(?<i>[A-Za-z0-9:_.-]{1,80})').replace('\0x', '(?<x>[\\s\\S]*)')}$`))
 export function relayOf(row: string) {
   for (const re of MARKS) { const g = re.exec(row)?.groups; if (g) return { name: g.n!, id: g.i!, text: g.x! } }
   return null

@@ -18,7 +18,7 @@ export const TOUR_LAYOUT: {
   pix: { chars: string; w400: number[]; w700: number[]; k400: Record<string, string>; k700: Record<string, string> }
   lang: Record<Lang, { bubble: { back: [number, number]; next: [number, number] }; modal: Record<string, TourModalLayout> }>
 } = {
-  "copyHash": {"es":"85d5357b","en":"b1380af9","ko":"6aad7aff"},
+  "copyHash": {"es":"85d5357b","en":"b1380af9","ko":"a3299d15"},
   "pix": {
     "chars": " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmno" +
       "pqrstuvwxyz{|}~¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâ" +
