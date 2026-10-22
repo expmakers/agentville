@@ -98,7 +98,26 @@ export async function toolsNow($: EngineInterface, now: number) {
   if (!toolNames || now - toolNames.at > 60000) toolNames = { at: now, names: (await $.tool.list().catch(() => [])).map(x => x.name) }
   return toolNames.names
 }
-export async function home($: EngineInterface) { return (await $.env.get('HOME')) ?? '' }
+// Windows sets no HOME: its USERPROFILE, with forward slashes like every path built from it.
+export async function home($: EngineInterface) { return (await $.env.get('HOME')) || ((await $.env.get('USERPROFILE')) ?? '').replace(/\\/g, '/') }
+// The app's own name for each session (its sidebar title), from the CLI's session registry (~/.claude/sessions/<pid>.json:
+// sessionId, name), read again at most every APP_NAMES_MS. A session started in the app often writes no title into its
+// transcript, so this is the one place its name is. Untrusted: small files, the name cleaned (cleanTitle).
+const APP_NAMES_MS = 15000
+let appNames = new Map<string, string>(), appNamesAt = -Infinity
+async function readAppNames($: EngineInterface, now: number) {
+  if (now - appNamesAt < APP_NAMES_MS) return appNames
+  appNamesAt = now
+  const dir = `${await home($)}/.claude/sessions`, next = new Map<string, string>()
+  for (const f of await $.fs.list(dir).catch(() => [])) {
+    if (!/^\d+\.json$/.test(f.name)) continue
+    const path = `${dir}/${f.name}`, st = await $.fs.stat(path).catch(() => null)
+    if (st?.kind !== 'file' || st.isLink || st.size > 65536) continue
+    const j = await readJson<{ sessionId?: unknown; name?: unknown }>($, path).catch(() => null), name = cleanTitle(j?.name)
+    if (typeof j?.sessionId === 'string' && /^[\w-]+$/.test(j.sessionId) && name) next.set(j.sessionId, name)
+  }
+  return (appNames = next)
+}
 export async function readJson<T>($: EngineInterface, path: string): Promise<T | null> {
   try { return JSON.parse(await $.fs.read(path)) as T } catch { return null }
 }
@@ -485,6 +504,8 @@ async function readBeats($: EngineInterface) {
 async function sync($: EngineInterface, reads = false) {
   const beats = await readBeats($)
   const now = await $.clock.now()
+  const appNamed = await readAppNames($, now).catch(() => appNames)
+  for (const b of beats) { const n = appNamed.get(b.id); if (n) b.title = n } // the app's sidebar name wins over the beat's own
   syncedAt = now
   if (reads) await lookArchived($, beats, now).catch(() => {})
   for (const b of beats) if (b.local && archivedIds.has(b.local)) b.archived = true; else delete b.archived // the look may have changed them
